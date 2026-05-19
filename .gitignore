@@ -1,3 +1,8 @@
+#Python files
+*.pyc
+*/__pycache__/
+.venv/
+
 # Sarathi files
 .sarathi
 data
@@ -5,7 +10,7 @@ notes
 output
 project.json
 papers
-
+plots
 
 # Claude files
 CLAUDE.md
