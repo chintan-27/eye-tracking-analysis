@@ -1,0 +1,13 @@
+# Sarathi files
+.sarathi
+data
+notes
+output
+project.json
+papers
+
+
+# Claude files
+CLAUDE.md
+HANDOFF.md
+.claude
