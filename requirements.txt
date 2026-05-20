@@ -1,0 +1,24 @@
+# Scientific stack
+numpy
+pandas
+scipy
+matplotlib
+seaborn
+mne
+tqdm
+
+# Database
+sqlalchemy       # defines and queries the SQLite tables
+pyarrow          # reads/writes Parquet files
+
+# Data loading
+openpyxl         # reads the .xlsx session questionnaire files
+
+# CLI output
+rich             # pretty terminal output (tables, colors, progress)
+
+# Video pipeline
+opencv-contrib-python  # cv2 + optflow (RLOF), HoughCircles, inpaint
+scikit-image           # phase_cross_correlation, structural_similarity
+zarr                   # dense optical flow field storage
+filterpy               # Kalman filter for pupil tracking
