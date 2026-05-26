@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iris · Eye-tracking Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #F0EDE8;
+  --card:     #FFFFFF;
+  --card-2:   #FAFAF7;
+  --ink:      #111318;
+  --ink-2:    #5A6270;
+  --ink-3:    #9BA3AE;
+  --hair:     rgba(17,19,24,.06);
+  --hair-2:   rgba(17,19,24,.13);
+  --pri:      #1A7A4A;
+  --pri-soft: #E3F1EB;
+  --pri-ink:  #134E30;
+  --acc:      #E55C3B;
+  --acc-soft: #FBDDD6;
+  --blink:    rgba(110,100,200,.15);
+
+  --r-frontal:  #5B70A8;
+  --r-central:  #55A87C;
+  --r-temporal: #C49055;
+  --r-parietal: #9B67A0;
+  --r-occipital:#4A7DA0;
+  --a1:#6DB87A; --a2:#E8B840; --a3:#E07A36; --a4:#CC3F3A;
+
+  --sh1: 0 1px 3px rgba(0,0,0,.05), 0 6px 20px -8px rgba(0,0,0,.10);
+  --sh2: 0 2px 6px rgba(0,0,0,.07), 0 16px 40px -12px rgba(0,0,0,.16);
+  --sh-inset: inset 0 1px 0 rgba(255,255,255,.8);
+  --r: 16px; --r-sm: 10px;
+
+  /* Sidebar dark theme */
+  --sb-bg:     #111318;
+  --sb-hover:  rgba(255,255,255,.08);
+  --sb-active: rgba(255,255,255,.14);
+  --sb-ink:    rgba(255,255,255,.65);
+  --sb-ink-hi: rgba(255,255,255,.95);
+  --sb-hair:   rgba(255,255,255,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(200,230,215,.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 100%, rgba(210,195,180,.2) 0%, transparent 50%);
+  color:var(--ink);font-family:"Inter",sans-serif;font-size:13.5px;
+  letter-spacing:-.005em;-webkit-font-smoothing:antialiased;
+  display:flex;height:100vh;
+}
+.mono{font-family:"JetBrains Mono",monospace;}
+.serif{font-family:"Instrument Serif",serif;}
+
+/* ── APP SHELL ──────────────────────────────────────────────────────── */
+.app{
+  display:grid;
+  grid-template-columns:172px 1fr;
+  width:100%;height:100vh;
+  gap:10px;padding:10px;
+  overflow:hidden;
+}
+
+/* ── SIDEBAR (DARK) ─────────────────────────────────────────────────── */
+.sidebar{
+  background: var(--sb-bg);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.04) 0%, transparent 100%);
+  border-radius:20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.05);
+  display:flex;flex-direction:column;align-items:stretch;
+  padding:14px 10px 14px;gap:2px;overflow:hidden;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  padding:2px 6px 14px;
+  border-bottom:1px solid var(--sb-hair);
+  margin-bottom:6px;cursor:pointer;
+}
+.logo-box{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,#2A9A60,#1A7A4A);
+  display:grid;place-items:center;
+  box-shadow:0 2px 6px rgba(26,122,74,.5);
+}
+.logo-box svg{color:#fff;}
+.brand-name{font-weight:700;font-size:14.5px;letter-spacing:-.02em;
+  color:var(--sb-ink-hi);line-height:1.1;}
+.brand-name small{display:block;font-size:9.5px;font-weight:400;
+  color:var(--sb-ink);margin-top:2px;letter-spacing:.01em;}
+
+.nav-section-label{
+  font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;
+  color:rgba(255,255,255,.3);padding:10px 10px 4px;
+}
+.nav-btn{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:10px;border:0;
+  background:transparent;cursor:pointer;
+  font:600 12.5px "Inter";color:var(--sb-ink);
+  transition:background .12s,color .12s;text-align:left;
+}
+.nav-btn:hover{background:var(--sb-hover);color:var(--sb-ink-hi);}
+.nav-btn.active{
+  background:var(--sb-active);
+  color:var(--sb-ink-hi);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.nav-btn .ico{font-size:16px;flex-shrink:0;width:22px;text-align:center;
+  opacity:.8;}
+.nav-btn.active .ico{opacity:1;}
+.nav-btn .lbl{flex:1;}
+
+/* ── SHELL ──────────────────────────────────────────────────────────── */
+.shell{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-width:0;}
+
+/* ── SESSION HEADER ─────────────────────────────────────────────────── */
+.sess-header{
+  background:var(--card);border-radius:14px;
+  box-shadow:var(--sh1),var(--sh-inset);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+  display:none;
+  border:1px solid var(--hair);
+}
+.sess-header.visible{display:flex;}
+.subj-badge{
+  font-family:"JetBrains Mono";font-weight:700;font-size:13.5px;
+  background:var(--ink);color:#fff;border-radius:8px;
+  padding:4px 11px;white-space:nowrap;letter-spacing:-.01em;
+}
+.sess-divider{
+  width:1px;height:20px;background:var(--hair-2);margin:0 2px;flex-shrink:0;
+}
+.sess-label{font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--ink-3);white-space:nowrap;}
+.sess-pills,.para-pills{display:flex;gap:3px;flex-wrap:wrap;}
+.sess-pill,.para-pill{
+  padding:4px 9px;border-radius:7px;
+  border:1.5px solid var(--hair-2);background:transparent;cursor:pointer;
+  font:600 11px "JetBrains Mono";color:var(--ink-2);
+  transition:all .12s;
+}
+.sess-pill:hover,.para-pill:hover{background:var(--hair);color:var(--ink);border-color:var(--hair-2);}
+.sess-pill.active,.para-pill.active{
+  background:var(--ink);color:#fff;border-color:var(--ink);
+}
+.rec-info{
+  margin-left:auto;font-size:10.5px;color:var(--ink-3);
+  font-family:"JetBrains Mono";white-space:nowrap;
+  background:var(--bg);border-radius:6px;padding:3px 8px;
+}
+
+/* ── MAIN ───────────────────────────────────────────────────────────── */
+.main{flex:1;overflow:hidden;position:relative;}
+.tab-panel{
+  position:absolute;inset:0;overflow-y:auto;display:none;
+  flex-direction:column;gap:10px;padding:1px 2px 8px;
+}
+.tab-panel.active{display:flex;}
+.tab-panel::-webkit-scrollbar{width:5px;}
+.tab-panel::-webkit-scrollbar-thumb{background:var(--hair-2);border-radius:4px;}
+
+/* ── CARDS ──────────────────────────────────────────────────────────── */
+.card{
+  background:var(--card);border-radius:var(--r);
+  box-shadow:var(--sh1),var(--sh-inset);
+  border:1px solid var(--hair);
+  overflow:hidden;flex-shrink:0;
+}
+.card-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 12px;
+  border-bottom:1px solid var(--hair);
+  background:linear-gradient(180deg, var(--card-2) 0%, var(--card) 100%);
+}
+.card-hd-l{display:flex;flex-direction:column;gap:3px;}
+.card-title{font-weight:700;font-size:14px;letter-spacing:-.02em;color:var(--ink);}
+.card-sub{font-size:11px;color:var(--ink-3);line-height:1.4;}
+.card-body{padding:16px 18px;}
+.card-row{display:flex;gap:10px;}
+
+/* ── PILLS / CONTROLS ───────────────────────────────────────────────── */
+.pill-grp{
+  display:flex;gap:2px;
+  background:var(--bg);
+  border-radius:9px;padding:3px;
+  border:1px solid var(--hair);
+}
+.pill{
+  padding:4px 11px;border-radius:7px;border:0;background:transparent;
+  cursor:pointer;font:500 11.5px "Inter";color:var(--ink-2);
+  transition:all .12s;white-space:nowrap;
+}
+.pill.active{
+  background:var(--card);color:var(--ink);
+  box-shadow:0 1px 3px rgba(0,0,0,.08),0 1px 0 rgba(255,255,255,.9);
+  font-weight:600;
+}
+.pill:hover:not(.active){background:rgba(17,19,24,.05);color:var(--ink);}
+.ctrl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.ctrl-lbl{font-size:11px;color:var(--ink-3);font-weight:500;white-space:nowrap;}
+.ctrl-sep{width:1px;height:18px;background:var(--hair-2);margin:0 3px;flex-shrink:0;}
+
+/* ── SUBJECT GRID ────────────────────────────────────────────────────── */
+.subject-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px;padding:2px 0;
+}
+.subject-card{
+  background:var(--card);border-radius:14px;padding:16px;cursor:pointer;
+  box-shadow:var(--sh1),var(--sh-inset);
+  border:1.5px solid var(--hair);
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+  position:relative;overflow:hidden;
+}
+.subject-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.6) 0%,transparent 60%);
+  pointer-events:none;
+}
+.subject-card:hover{
+  transform:translateY(-3px);box-shadow:var(--sh2),var(--sh-inset);
+  border-color:var(--hair-2);
+}
+.subject-card.selected{border-color:var(--ink);box-shadow:var(--sh2),0 0 0 1px var(--ink);}
+.sc-id{
+  font-family:"JetBrains Mono";font-weight:800;font-size:20px;
+  color:var(--ink);letter-spacing:-.03em;
+}
+.sc-meta{font-size:11px;color:var(--ink-2);margin-top:4px;font-weight:500;}
+.sc-swatches{display:flex;gap:4px;margin-top:12px;}
+.sc-swatch{flex:1;height:5px;border-radius:99px;}
+.sc-sessions{
+  font-size:10.5px;color:var(--ink-3);margin-top:10px;
+  display:flex;align-items:center;gap:5px;
+}
+
+/* ── EEG VIEWER ─────────────────────────────────────────────────────── */
+.eeg-wrap{
+  overflow:auto;border-top:1px solid var(--hair);
+  min-height:180px;max-height:580px;
+  background:linear-gradient(180deg,var(--card-2) 0%,var(--card) 30px);
+}
+
+/* ── VIDEO SYNC ─────────────────────────────────────────────────────── */
+.video-top{display:flex;align-items:flex-start;gap:20px;padding:16px 18px;}
+.video-frame-col{display:flex;flex-direction:column;gap:10px;align-items:center;flex-shrink:0;}
+.video-frame-box{
+  background:#0a0a0f;border-radius:12px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  width:400px;height:344px;
+  box-shadow:0 4px 20px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.05);
+}
+#videoImg{max-width:100%;max-height:100%;display:block;}
+.video-meta-col{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:2px;}
+.vm-row{display:flex;align-items:baseline;gap:10px;}
+.vm-label{
+  font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-3);width:48px;
+}
+.vm-val{font-family:"JetBrains Mono";font-size:14px;font-weight:700;color:var(--ink);}
+.trial-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--pri-soft);color:var(--pri-ink);
+  border-radius:99px;padding:5px 12px;font-size:11.5px;font-weight:600;
+  margin-top:6px;border:1px solid rgba(26,122,74,.2);
+}
+.trial-badge.missed{background:var(--acc-soft);color:var(--acc);border-color:rgba(229,92,59,.2);}
+
+.video-eeg-wrap{padding:0 18px;border-top:1px solid var(--hair);}
+.video-eeg-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0 4px;font-size:11px;color:var(--ink-3);
+}
+
+.video-controls{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 18px;border-top:1px solid var(--hair);
+  background:var(--card-2);
+}
+.v-btn{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--hair-2);
+  background:var(--card);cursor:pointer;font-size:12px;
+  display:grid;place-items:center;transition:all .1s;flex-shrink:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
+}
+.v-btn:hover{background:var(--bg);border-color:var(--hair-2);}
+.v-btn.primary{
+  background:var(--ink);color:#fff;border-color:var(--ink);
+  box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+.v-btn.primary:hover{background:#2a3140;}
+#videoScrubber{flex:1;accent-color:var(--ink);height:4px;}
+.v-time{font-family:"JetBrains Mono";font-size:11px;color:var(--ink-3);white-space:nowrap;}
+
+/* ── GAZE ────────────────────────────────────────────────────────────── */
+.gaze-player-wrap{padding:16px 18px;border-bottom:1px solid var(--hair);}
+.gaze-display{
+  background:#0d0e1a;border-radius:10px;overflow:hidden;
+  width:100%;max-height:220px;aspect-ratio:16/9;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.gaze-scrubber-row{display:flex;align-items:center;gap:12px;margin-top:10px;}
+.gaze-time{font-family:"JetBrains Mono";font-size:11px;color:var(--ink-3);white-space:nowrap;}
+
+/* ── ANALYSIS ────────────────────────────────────────────────────────── */
+.explain-box{
+  background:linear-gradient(135deg,var(--pri-soft),rgba(227,241,235,.5));
+  border-radius:10px;padding:11px 15px;
+  font-size:11.5px;color:var(--pri-ink);line-height:1.65;
+  margin-bottom:14px;border:1px solid rgba(26,122,74,.15);
+}
+.explain-box strong{font-weight:700;}
+
+/* ── SPINNER / LOADING ───────────────────────────────────────────────── */
+.loading{
+  display:flex;align-items:center;justify-content:center;
+  min-height:80px;color:var(--ink-3);font-size:12px;gap:8px;
+}
+.spin{
+  width:18px;height:18px;border:2px solid var(--hair-2);
+  border-top-color:var(--ink-3);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── STATS ───────────────────────────────────────────────────────────── */
+.stat-row{display:flex;gap:8px;flex-wrap:wrap;}
+.stat-chip{
+  background:var(--bg);border-radius:10px;padding:10px 16px;
+  border:1px solid var(--hair);
+}
+.stat-chip .sv{font-weight:800;font-size:22px;letter-spacing:-.03em;}
+.stat-chip .sl{font-size:10.5px;color:var(--ink-3);margin-top:2px;}
+
+/* ── TRIAL TABLE ─────────────────────────────────────────────────────── */
+.trial-table{width:100%;border-collapse:collapse;}
+.trial-table th{
+  padding:7px 16px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);
+  background:var(--bg);text-align:left;border-bottom:1px solid var(--hair);
+}
+.trial-table td{
+  padding:7px 16px;font-size:12px;
+  border-top:1px solid var(--hair);cursor:pointer;
+}
+.trial-table tr:hover td{background:var(--pri-soft);}
+
+/* ── BLINK ATLAS ─────────────────────────────────────────────────────── */
+.blink-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.blink-card{
+  background:var(--card-2);border:1.5px solid var(--hair);border-radius:12px;
+  padding:10px;cursor:pointer;transition:all .15s;
+}
+.blink-card:hover{border-color:var(--pri);transform:translateY(-2px);box-shadow:var(--sh2);}
+.blink-card.selected{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri);}
+.blink-card.eeg-only{opacity:.6;}
+.bc-frames{display:flex;gap:2px;margin-bottom:8px;border-radius:6px;overflow:hidden;height:64px;background:#111;}
+.bc-frame{flex:1;object-fit:contain;display:block;background:#111;}
+.bc-eeg{height:36px;width:100%;margin-bottom:6px;}
+.bc-meta{font-size:10px;color:var(--ink-3);display:flex;justify-content:space-between;}
+.bc-badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:4px;
+  background:var(--pri-soft);color:var(--pri-ink);}
+.bc-badge.missed{background:var(--acc-soft);color:var(--acc);}
+.bc-badge.eeg-only{background:var(--bg);color:var(--ink-3);}
+
+/* ── TIMELINE STRIP ──────────────────────────────────────────────────── */
+#timelineStrip { padding:0; }
+#timelineWrap:hover #timelineSvg .tl-marker { opacity:.9; }
+
+/* ── COHORT MATRIX ───────────────────────────────────────────────────── */
+.matrix-cell{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:8px;cursor:pointer;
+  font-size:11px;font-weight:700;
+  transition:transform .12s,box-shadow .12s;
+  border:2px solid transparent;
+}
+.matrix-cell:hover{transform:scale(1.1);box-shadow:0 4px 14px rgba(0,0,0,.2);}
+.matrix-cell.selected{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ───────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="brand" onclick="goHome()">
+    <div class="logo-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+    </div>
+    <div class="brand-name">Iris<small>Eye-tracking · BCI</small></div>
+  </div>
+
+  <div class="nav-section-label">Analysis</div>
+  <button class="nav-btn" id="nav-eeg" onclick="showTab('eeg')">
+    <span class="ico">〰</span><span class="lbl">EEG Viewer</span>
+  </button>
+  <button class="nav-btn" id="nav-analysis" onclick="showTab('analysis')">
+    <span class="ico">◉</span><span class="lbl">Brain Signals</span>
+  </button>
+  <button class="nav-btn" id="nav-video" onclick="showTab('video')">
+    <span class="ico">▶</span><span class="lbl">Video Sync</span>
+  </button>
+  <button class="nav-btn" id="nav-gaze" onclick="showTab('gaze')">
+    <span class="ico">◎</span><span class="lbl">Gaze Map</span>
+  </button>
+  <button class="nav-btn" id="nav-blinks" onclick="showTab('blinks')">
+    <span class="ico">👁</span><span class="lbl">Blink Atlas</span>
+  </button>
+</aside>
+
+<!-- ── SHELL ─────────────────────────────────────────────────────────── -->
+<div class="shell">
+
+  <!-- Session header (hidden on home, visible when recording selected) -->
+  <div class="sess-header" id="sessHeader">
+    <div class="subj-badge mono" id="subjBadge">—</div>
+    <div class="sess-divider"></div>
+    <div class="sess-label">Session</div>
+    <div class="sess-pills" id="sessPills"></div>
+    <div class="sess-divider"></div>
+    <div class="sess-label">Paradigm</div>
+    <div class="para-pills" id="paraPills"></div>
+    <div class="rec-info mono" id="recInfo">—</div>
+  </div>
+
+  <!-- SESSION TIMELINE STRIP (hidden until recording loaded) -->
+  <div id="timelineStrip" style="display:none;flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px 3px;">
+      <span style="font-size:10px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em;">Session Timeline</span>
+      <span id="syncBadge" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;"></span>
+    </div>
+    <div id="timelineWrap" style="background:var(--card);border-radius:10px;box-shadow:var(--sh1);border:1px solid var(--hair);cursor:crosshair;overflow:hidden;">
+      <svg id="timelineSvg" width="100%" height="40"></svg>
+    </div>
+  </div>
+
+  <!-- MAIN panels -->
+  <main class="main">
+
+    <!-- HOME: subject grid -->
+    <div class="tab-panel active" id="tab-home">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title">Subjects</div>
+            <div class="card-sub" id="homeSubLabel">Loading…</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ink-3);">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--a1);margin-right:4px;"></span>Rested</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--a2);margin-right:4px;"></span>Slight</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--a3);margin-right:4px;"></span>Moderate</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--a4);margin-right:4px;"></span>Extreme</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="subject-grid" id="subjectGrid">
+            <div class="loading" style="grid-column:1/-1;"><div class="spin"></div>Loading subjects…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EEG VIEWER -->
+    <div class="tab-panel" id="tab-eeg">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title" id="eegTitle">EEG</div>
+            <div class="card-sub">Raw μV · demeaned · grey bands = detected blinks (EEG-based, sparse)</div>
+          </div>
+          <div class="ctrl-row">
+            <!-- View mode -->
+            <div class="pill-grp" id="eegModePills">
+              <button class="pill" onclick="setEegMode('butterfly')">Butterfly</button>
+              <button class="pill active" onclick="setEegMode('separate')">Separate</button>
+              <button class="pill" onclick="setEegMode('stacked')">Stacked</button>
+            </div>
+            <div class="ctrl-sep"></div>
+            <!-- Region selector: only shown in stacked mode -->
+            <div class="pill-grp" id="regionPills">
+              <button class="pill" onclick="setRegion('Frontal')">Frontal</button>
+              <button class="pill active" onclick="setRegion('Central')">Central</button>
+              <button class="pill" onclick="setRegion('Parietal')">Parietal</button>
+              <button class="pill" onclick="setRegion('Temporal')">Temporal</button>
+              <button class="pill" onclick="setRegion('Occipital')">Occipital</button>
+            </div>
+            <div class="ctrl-sep"></div>
+            <div class="pill-grp" id="bandPills">
+              <button class="pill active" onclick="setBand('raw')">Raw</button>
+              <button class="pill" onclick="setBand('alpha')">α 8–12</button>
+              <button class="pill" onclick="setBand('beta')">β 12–30</button>
+              <button class="pill" onclick="setBand('gamma')">γ 30+</button>
+            </div>
+            <div class="ctrl-sep"></div>
+            <button class="pill active" id="followBtn" onclick="setFollow(!ST.t_follow)"
+              title="EEG follows video (click to disable)"
+              style="background:var(--pri-soft);color:var(--pri-ink);font-weight:700;">
+              ⟳ Follow
+            </button>
+          </div>
+        </div>
+        <div class="eeg-wrap" id="eegWrap" style="max-height:560px;">
+          <div class="loading"><div class="spin"></div>Select a subject to begin</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title" style="font-size:12px;">Session Timeline</div>
+          <div class="ctrl-row">
+            <button class="pill" onclick="eegPan(-1)">◀ 1s</button>
+            <button class="pill" onclick="eegPan(1)">1s ▶</button>
+            <div class="ctrl-sep"></div>
+            <span class="ctrl-lbl">Window:</span>
+            <div class="pill-grp" id="winPills">
+              <button class="pill" onclick="setWin(2)">2s</button>
+              <button class="pill active" onclick="setWin(5)">5s</button>
+              <button class="pill" onclick="setWin(10)">10s</button>
+              <button class="pill" onclick="setWin(20)">20s</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:10px 18px 8px;">
+          <div id="minimapWrap" style="height:44px;cursor:crosshair;border-radius:8px;overflow:hidden;background:var(--bg);">
+            <svg id="minimapSvg" width="100%" height="44"></svg>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:3px;">
+            <span>0s</span><span id="durLabel">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRAIN SIGNALS (ANALYSIS) -->
+    <div class="tab-panel" id="tab-analysis">
+      <div class="card-row">
+        <!-- ERP -->
+        <div class="card" style="flex:1;min-width:0;">
+          <div class="card-hd">
+            <div class="card-hd-l">
+              <div class="card-title">Brain Response to Stimuli (ERP)</div>
+              <div class="card-sub">Average of all trials · time-locked to stimulus at 0ms</div>
+            </div>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">Channels:</span>
+              <div class="pill-grp" id="erpChPills">
+                <button class="pill active" onclick="setErpCh('CZ,CPZ,PZ')">Parietal</button>
+                <button class="pill" onclick="setErpCh('C3,CZ,C4')">Motor</button>
+                <button class="pill" onclick="setErpCh('FZ,FCZ,CZ')">Frontal-C</button>
+                <button class="pill" onclick="setErpCh('O1,OZ,O2')">Occipital</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" id="erpBody">
+            <div class="loading"><div class="spin"></div>Select a recording</div>
+          </div>
+        </div>
+        <!-- PSD -->
+        <div class="card" style="flex:1;min-width:0;">
+          <div class="card-hd">
+            <div class="card-hd-l">
+              <div class="card-title">Brain Frequency Content (PSD)</div>
+              <div class="card-sub">How much of each brain rhythm is present — full session</div>
+            </div>
+            <div class="pill-grp" id="psdRegPills">
+              <button class="pill" onclick="setPsdReg('Frontal')">Frontal</button>
+              <button class="pill active" onclick="setPsdReg('Central')">Central</button>
+              <button class="pill" onclick="setPsdReg('Parietal')">Parietal</button>
+              <button class="pill" onclick="setPsdReg('Occipital')">Occipital</button>
+            </div>
+          </div>
+          <div class="card-body" id="psdBody">
+            <div class="loading"><div class="spin"></div>Select a recording</div>
+          </div>
+        </div>
+      </div>
+      <!-- Trials table -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">All Trials</div>
+          <div class="card-sub" id="trialCount">—</div>
+        </div>
+        <div style="max-height:240px;overflow:auto;" id="trialTableWrap">
+          <div class="loading"><div class="spin"></div>Select a recording</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO SYNC -->
+    <div class="tab-panel" id="tab-video">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title">Phantom Video + EEG Sync</div>
+            <div class="card-sub" id="videoSubLabel">phan_frame aligned · EEG scrolls with playback</div>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-lbl">Speed:</span>
+            <div class="pill-grp" id="speedPills">
+              <button class="pill" onclick="setSpeed(1)">1×</button>
+              <button class="pill active" onclick="setSpeed(4)">4×</button>
+              <button class="pill" onclick="setSpeed(10)">10×</button>
+              <button class="pill" onclick="setSpeed(30)">30×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top: video + meta side by side -->
+        <div class="video-top">
+          <div class="video-frame-col">
+            <div class="video-frame-box" id="videoFrameBox">
+              <div class="loading" id="videoLoading" style="color:#aaa;">Select a recording</div>
+              <img id="videoImg" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain;">
+            </div>
+          </div>
+          <div class="video-meta-col">
+            <div class="vm-row"><span class="vm-label">Frame</span><span class="vm-val" id="vmFrame">—</span></div>
+            <div class="vm-row"><span class="vm-label">Time</span><span class="vm-val" id="vmTime">—</span></div>
+            <div class="vm-row"><span class="vm-label">FPS</span><span class="vm-val" id="vmFps">—</span></div>
+            <div id="trialBadge" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- EEG panel below video -->
+        <div class="video-eeg-wrap">
+          <div class="video-eeg-hd">
+            <span>EEG · 4s window · synced via phan_frame ✓ · FP1 (coral) = blink channel — spikes 100–300µV during blinks · <span style="color:var(--blink);filter:brightness(0.5);">■</span> blink band = FP1 peak ±100ms (10Hz LP filter, paper method)</span>
+            <span id="videoEegTime" style="font-family:'JetBrains Mono';font-size:11px;"></span>
+          </div>
+          <div id="videoEegWrap" style="min-height:160px;">
+            <div class="loading" style="min-height:160px;"><div class="spin"></div>—</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="video-controls">
+          <button class="v-btn" onclick="videoStep(-1000)" title="−1000">⏮</button>
+          <button class="v-btn" onclick="videoStep(-1)" title="−1">◀</button>
+          <button class="v-btn primary" id="playBtn" onclick="videoToggle()">▶</button>
+          <button class="v-btn" onclick="videoStep(1)" title="+1">▶</button>
+          <button class="v-btn" onclick="videoStep(1000)" title="+1000">⏭</button>
+          <input type="range" id="videoScrubber" min="0" max="1000" value="0"
+            oninput="videoScrubInput(this.value)">
+          <span class="v-time" id="vTimeLabel">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAZE MAP -->
+    <div class="tab-panel" id="tab-gaze">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title">Gaze Position Player</div>
+            <div class="card-sub">Where the subject was looking at each moment</div>
+          </div>
+          <div id="gazeStats" style="font-size:11px;color:var(--ink-3);"></div>
+        </div>
+        <div class="gaze-player-wrap">
+          <div class="gaze-display" id="gazeDisplay">
+            <svg id="gazeSvg" width="100%" height="100%">
+              <rect width="100%" height="100%" fill="#1a1a2e"/>
+              <line x1="50%" y1="45%" x2="50%" y2="55%" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+              <line x1="45%" y1="50%" x2="55%" y2="50%" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+              <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="rgba(255,255,255,.3)">Select a recording</text>
+            </svg>
+          </div>
+          <div class="gaze-scrubber-row">
+            <span class="gaze-time" id="gazeTimeStart">0s</span>
+            <input type="range" id="gazeScrubber" min="0" max="1000" value="0"
+              style="flex:1;accent-color:var(--ink);"
+              oninput="gazeSeek(this.value / 1000)">
+            <span class="gaze-time" id="gazeTimeEnd">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <div class="card" style="flex:2;min-width:0;">
+          <div class="card-hd">
+            <div class="card-title">Fixation Heatmap</div>
+            <div class="card-sub">Full session · 1920×1080 display</div>
+          </div>
+          <div id="heatmapWrap">
+            <div class="loading" style="min-height:160px;"><div class="spin"></div>Select a recording</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:160px;">
+          <div class="card-hd"><div class="card-title">Saccade Directions</div></div>
+          <div class="card-body" id="polarBody">
+            <div class="loading" style="min-height:140px;"><div class="spin"></div>—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLINK ATLAS -->
+    <div class="tab-panel" id="tab-blinks">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title">Blink Atlas</div>
+            <div class="card-sub" id="blinkAtlasSubtitle">Click a blink to inspect its video, EEG, and trial context</div>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-lbl">Show:</span>
+            <div class="pill-grp" id="blinkFilterPills">
+              <button class="pill active" onclick="filterBlinks('all')">All</button>
+              <button class="pill" onclick="filterBlinks('video')">In-video only</button>
+              <button class="pill" onclick="filterBlinks('strong')">Strong only (&gt;100µV)</button>
+            </div>
+            <div class="ctrl-sep"></div>
+            <span class="ctrl-lbl">Sort:</span>
+            <div class="pill-grp" id="blinkSortPills">
+              <button class="pill active" onclick="sortBlinks('time')">Time</button>
+              <button class="pill" onclick="sortBlinks('amplitude')">Amplitude</button>
+            </div>
+          </div>
+        </div>
+        <!-- Grid of blink cards -->
+        <div class="card-body" style="padding:14px;" id="blinkGrid">
+          <div class="loading"><div class="spin"></div>Select a recording</div>
+        </div>
+      </div>
+
+      <!-- Blink detail panel (shown when a card is clicked) -->
+      <div class="card" id="blinkDetail" style="display:none;">
+        <div class="card-hd">
+          <div class="card-hd-l">
+            <div class="card-title" id="blinkDetailTitle">Blink Detail</div>
+            <div class="card-sub" id="blinkDetailSub"></div>
+          </div>
+          <button class="pill" onclick="closeBlinkDetail()" style="margin-left:auto;">✕ Close</button>
+        </div>
+        <div class="card-body">
+          <!-- Filmstrip -->
+          <div id="blinkFilmstrip" style="display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;"></div>
+          <!-- EEG panel -->
+          <div id="blinkDetailEeg" style="min-height:180px;border-top:1px solid var(--hair);padding-top:10px;"></div>
+          <!-- Aperture (if available) -->
+          <div id="blinkDetailAperture" style="display:none;margin-top:10px;border-top:1px solid var(--hair);padding-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /shell -->
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════════════════════════ */
+const PARADIGMS = ['ME','MI','SSVEP','P3004L','P3005L'];
+const AL_COL = {1:'#87C18E',2:'#F2C84B',3:'#ED8E4A',4:'#D9534F'};
+const REG_COL = {Frontal:'#6B7FB0',Central:'#6FAE89',Temporal:'#D4A574',Parietal:'#B580A8',Occipital:'#5689A8'};
+const REG_CHS = {
+  Frontal:  ['FP1','FPZ','FP2','AF3','AF4','F7','F5','F3','F1','FZ','F2'],
+  Central:  ['FC3','FC1','FCZ','FC2','FC4','CZ','C3','C1','C2','C4'],
+  Temporal: ['T7','C5','C3','C1','C2','C4','C6','T8'],
+  Parietal: ['CP3','CP1','CPZ','CP2','CP4','P3','P1','PZ','P2','P4'],
+  Occipital:['PO3','POZ','PO4','O1','OZ','O2','CB1','CB2'],
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════════ */
+const ST = {
+  recId: null, subjectId: null, sessionId: null, paradigm: null,
+  _subjects: [], _subjectData: null,
+
+  // ── GLOBAL TIME (video-relative seconds, shared across all tabs) ──────
+  t_current:  0,       // current playhead position in video time
+  t_follow:   true,    // when true: EEG viewer auto-scrolls to match video
+
+  eeg:   { t_start: 0, win: 5, region: 'Central', band: 'raw', scaleUV: 150, mode: 'separate' },
+  anal:  { erpCh: 'CZ,CPZ,PZ', psdReg: 'Central' },
+  video: { frame: 0, playing: false, _timer: null,
+           fps: 167, nFrames: 0, speed: 4, _eegTimer: null,
+           startFrame: 0, eegAtStart: 0,
+         },
+  gaze:  { duration: 0, displayW: 1024, displayH: 768 },
+  _drawn: {},
+  _mmDuration: 0,
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const _L = (id, msg='Loading…') =>
+  $(id).innerHTML = `<div class="loading"><div class="spin"></div>${msg}</div>`;
+const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const _fmt = s => s < 60 ? `${s.toFixed(1)}s` : `${Math.floor(s/60)}m${(s%60).toFixed(0)}s`;
+
+function _setPillActive(groupId, matchFn) {
+  document.querySelectorAll(`#${groupId} .pill`).forEach(p =>
+    p.classList.toggle('active', matchFn(p)));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════════ */
+async function init() {
+  const subjects = await fetch('/api/subjects').then(r => r.json());
+  ST._subjects = subjects;
+  $('homeSubLabel').textContent = `${subjects.length} subjects · ${subjects.reduce((s,x)=>s+x.n_sessions,0)} sessions`;
+  _renderSubjectGrid(subjects);
+  _setupMinimapClick();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HOME — SUBJECT GRID
+══════════════════════════════════════════════════════════════════ */
+function _renderSubjectGrid(subjects) {
+  let html = '';
+  for (const s of subjects) {
+    const swatches = PARADIGMS.map(p => {
+      const al = s.alertness[p];
+      const col = al ? AL_COL[al] : '#e0dcd6';
+      return `<div class="sc-swatch" style="background:${col}" title="${p}: alertness ${al||'—'}"></div>`;
+    }).join('');
+    html += `<div class="subject-card" id="sc-${s.id}" onclick="selectSubject('${s.id}')">
+      <div class="sc-id">${s.id}</div>
+      <div class="sc-meta">${s.age||'?'}y · ${s.sex||'?'}</div>
+      <div class="sc-swatches">${swatches}</div>
+      <div class="sc-sessions">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        ${s.n_sessions} session${s.n_sessions===1?'':'s'}
+      </div>
+    </div>`;
+  }
+  $('subjectGrid').innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SUBJECT / SESSION SELECTION
+══════════════════════════════════════════════════════════════════ */
+function selectSubject(subjId) {
+  ST.subjectId = subjId;
+  ST._subjectData = ST._subjects.find(s => s.id === subjId);
+  if (!ST._subjectData) return;
+
+  // Highlight card
+  document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('selected'));
+  $(`sc-${subjId}`)?.classList.add('selected');
+
+  // Show session header
+  $('subjBadge').textContent = subjId;
+  $('sessHeader').classList.add('visible');
+
+  // Build session pills
+  const sessions = ST._subjectData.sessions;
+  $('sessPills').innerHTML = sessions.map(s =>
+    `<button class="sess-pill" id="sp-${s.session_id}" onclick="selectSession('${s.session_id}')"
+      title="${s.date||''}">Sess${s.session_number}</button>`
+  ).join('');
+
+  // Auto-select first session
+  selectSession(sessions[0].session_id);
+}
+
+function selectSession(sessId) {
+  ST.sessionId = sessId;
+  // Highlight session pill
+  document.querySelectorAll('.sess-pill').forEach(p =>
+    p.classList.toggle('active', p.id === `sp-${sessId}`));
+
+  // Build paradigm pills from this session's available paradigms
+  const sessData = ST._subjectData?.sessions.find(s => s.session_id === sessId);
+  const paras = sessData?.paradigms || PARADIGMS;
+  $('paraPills').innerHTML = paras.map(p =>
+    `<button class="para-pill" id="pp-${sessId}-${p}" onclick="selectParadigm('${sessId}','${p}')">${p}</button>`
+  ).join('');
+
+  // Auto-select first paradigm
+  if (paras.length) selectParadigm(sessId, paras[0]);
+}
+
+function selectParadigm(sessId, paradigm) {
+  ST.paradigm = paradigm;
+  ST.sessionId = sessId;
+  // Highlight pill
+  document.querySelectorAll('.para-pill').forEach(p =>
+    p.classList.toggle('active', p.id === `pp-${sessId}-${paradigm}`));
+
+  const recId = `${sessId}_${paradigm}`;
+  loadRecording(recId);
+}
+
+function loadRecording(recId) {
+  ST.recId = recId;
+  ST.eeg.t_start = 0;
+  ST.t_current = 0;
+  ST._drawn = {};
+  videoPause();
+  ST.video.frame = 0;
+
+  $('recInfo').textContent = recId;
+
+  // Timeline loads eagerly (fast — DB only, no video scan).
+  // Blinks load lazily when the user opens Video or Blink Atlas tab.
+  _blinkData   = null;
+  _blinkByFrame = null;
+  loadTimeline(recId);
+
+  // If on home, switch to EEG tab
+  if (_activeTab === 'home') showTab('eeg');
+  else drawActiveTab();
+}
+
+function goHome() {
+  showTab('home');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════════════════════════ */
+let _activeTab = 'home';
+
+function showTab(name) {
+  _activeTab = name;
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  $(`tab-${name}`)?.classList.add('active');
+  $(`nav-${name}`)?.classList.add('active');
+  if (ST.recId && !ST._drawn[name]) drawActiveTab();
+}
+
+function drawActiveTab() {
+  if (!ST.recId) return;
+  if (_activeTab === 'eeg')           drawEeg();
+  else if (_activeTab === 'analysis') drawAnalysis();
+  else if (_activeTab === 'video')    initVideo();
+  else if (_activeTab === 'gaze')     drawGaze();
+  else if (_activeTab === 'blinks')   drawBlinks();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EEG VIEWER
+══════════════════════════════════════════════════════════════════ */
+
+// 5 representative channels — one per region
+const SUMMARY_CHS = 'FZ,CZ,CPZ,T7,OZ';
+const SUMMARY_META = {
+  FZ:  { col:'#6B7FB0', label:'FZ  Frontal midline' },
+  CZ:  { col:'#6FAE89', label:'CZ  Vertex (central)' },
+  CPZ: { col:'#B580A8', label:'CPZ Centro-parietal' },
+  T7:  { col:'#D4A574', label:'T7  Left temporal' },
+  OZ:  { col:'#5689A8', label:'OZ  Occipital' },
+};
+
+function setEegMode(m) {
+  ST.eeg.mode = m;
+  _setPillActive('eegModePills', p => p.getAttribute('onclick')?.includes(`'${m}'`));
+  // Show/hide region pills (only needed in stacked mode)
+  $('regionPills').style.display = m === 'stacked' ? '' : 'none';
+  const titles = { butterfly:'EEG — Butterfly (all regions overlapped)',
+                   separate: 'EEG — 5 Regions (separate axes)',
+                   stacked:  'EEG — Stacked channels' };
+  $('eegTitle').textContent = titles[m] || 'EEG';
+  drawEeg();
+}
+function setRegion(r) {
+  ST.eeg.region = r;
+  _setPillActive('regionPills', p => p.textContent.trim() === r);
+  drawEeg();
+}
+function setBand(b) {
+  ST.eeg.band = b;
+  _setPillActive('bandPills', p => p.getAttribute('onclick')?.includes(`'${b}'`));
+  drawEeg();
+}
+function setScale(uv) {
+  ST.eeg.scaleUV = uv;
+  drawEeg();
+}
+function setWin(w) {
+  ST.eeg.win = w;
+  _setPillActive('winPills', p => p.getAttribute('onclick')?.includes(`(${w})`));
+  drawEeg();
+}
+function eegPan(dir) {
+  ST.eeg.t_start = Math.max(0, ST.eeg.t_start + dir * ST.eeg.win * 0.5);
+  _updateTimelineMarker(ST.t_current);
+  drawEeg();
+}
+
+function _setupMinimapClick() {
+  $('minimapWrap').addEventListener('click', e => {
+    const rect = $('minimapWrap').getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    const dur = ST._mmDuration || 0;
+    if (!dur) return;
+    ST.eeg.t_start = Math.max(0, frac * dur - ST.eeg.win / 2);
+    drawEeg();
+  });
+}
+
+let _eegAbort = null;
+async function drawEeg() {
+  if (!ST.recId) return;
+  ST._drawn.eeg = true;
+  if (_eegAbort) _eegAbort.abort();
+  _eegAbort = new AbortController();
+
+  const mode = ST.eeg.mode || 'separate';
+  const t0 = ST.eeg.t_start, t1 = t0 + ST.eeg.win;
+
+  // butterfly & separate: fetch ALL 64 channels grouped by region (no ?channels= param)
+  // stacked: fetch the selected region's channels only
+  const chsParam = (mode === 'stacked')
+    ? `&channels=${(REG_CHS[ST.eeg.region] || REG_CHS.Central).slice(0, 10).join(',')}`
+    : '';
+  _L('eegWrap');
+
+  try {
+    const [wData, events, mm] = await Promise.all([
+      fetch(`/api/eeg/${ST.recId}/window?t_start_s=${t0}&t_end_s=${t1}${chsParam}&band=${ST.eeg.band}&scale=raw`,
+        {signal: _eegAbort.signal}).then(r => r.json()),
+      fetch(`/api/eeg/${ST.recId}/events`).then(r => r.json()),
+      fetch(`/api/eeg/${ST.recId}/minimap`).then(r => r.json()),
+    ]);
+    ST._mmDuration = mm.duration_s;
+    $('durLabel').textContent = _fmt(mm.duration_s);
+    _renderMinimap(mm, t0, t0 + ST.eeg.win);
+
+    if (mode === 'butterfly') _renderButterfly('eegWrap', wData, events.events || []);
+    else if (mode === 'separate') _renderSeparate('eegWrap', wData, events.events || []);
+    else _renderEegStacked('eegWrap', wData, events.events || []);
+  } catch(e) {
+    if (e.name !== 'AbortError')
+      $('eegWrap').innerHTML = `<div class="loading" style="color:var(--acc)">Error: ${e.message}</div>`;
+  }
+}
+
+/* ─── Butterfly: all 64 channels overlapped, coloured by region ──────────── */
+function _renderButterfly(containerId, data, events) {
+  const container = $(containerId);
+  const regions   = data.regions || [];
+  const times     = data.times   || [];
+  const blinks    = data.blink_times || [];
+  if (!regions.length || !times.length) {
+    container.innerHTML = '<div class="loading">No data</div>'; return;
+  }
+
+  // Flatten all channels, demean each
+  const allChs = regions.flatMap(reg =>
+    (reg.channels || []).map(ch => ({ ...ch, col: reg.color, region: reg.name, y: _demean(ch.y) }))
+  );
+
+  const W = Math.max(container.getBoundingClientRect().width || 800, 400);
+  const H = 340, mg = { top:20, right:110, bottom:24, left:52 };
+  const pw = W - mg.left - mg.right, ph = H - mg.top - mg.bottom;
+  const tMin = times[0], tMax = times[times.length-1], tRange = tMax-tMin || 1;
+
+  // Common scale: median of per-channel p95 (avoids one bad channel dominating)
+  const scales = allChs.map(ch => _p95(ch.y)).sort((a,b)=>a-b);
+  const commonScale = Math.max(5, scales[Math.floor(scales.length * 0.7)]);
+
+  const px = t => mg.left + (t-tMin)/tRange * pw;
+  const py = v => mg.top + ph/2 - Math.max(-ph/2, Math.min(ph/2, (v/commonScale)*(ph/2)));
+
+  let s = `<svg width="${W}" height="${H}" style="display:block;overflow:visible">`;
+
+  // Blink bands: ±100ms around peak (blink ~197ms, peak near middle — paper Table 3)
+  for (const bt of blinks) {
+    const bx = Math.max(mg.left, px(bt-0.15)), bx2 = Math.min(mg.left+pw, px(bt+0.2));
+    s += `<rect x="${bx}" y="${mg.top}" width="${Math.max(2,bx2-bx)}" height="${ph}" fill="var(--blink)" rx="2"/>`;
+    // Mark the exact FP1 peak with a vertical tick
+    const peakX = px(bt);
+    if (peakX > mg.left && peakX < mg.left+pw)
+      s += `<line x1="${peakX}" y1="${mg.top}" x2="${peakX}" y2="${mg.top+14}" stroke="rgba(110,100,200,.6)" stroke-width="1.5"/>`;
+  }
+
+  // Zero line + event markers
+  s += `<line x1="${mg.left}" y1="${py(0)}" x2="${mg.left+pw}" y2="${py(0)}" stroke="rgba(20,24,31,.12)" stroke-width="1"/>`;
+  for (const ev of events) {
+    if (ev.t_s < tMin-.1 || ev.t_s > tMax+.1) continue;
+    const ex = px(ev.t_s);
+    s += `<line x1="${ex}" y1="${mg.top}" x2="${ex}" y2="${mg.top+ph}" stroke="#E76F51" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>`;
+    s += `<text x="${ex+3}" y="${mg.top+10}" font-size="8.5" fill="#E76F51">${_esc(ev.label)}</text>`;
+  }
+
+  // All traces — thin & semi-transparent so overlap is readable
+  for (const ch of allChs) {
+    const pts = times.map((t,i) => `${i===0?'M':'L'}${px(t).toFixed(1)},${py(ch.y[i]).toFixed(1)}`).join(' ');
+    s += `<path d="${pts}" stroke="${ch.col}" fill="none" stroke-width="0.9" opacity=".55"/>`;
+  }
+
+  // Y-axis
+  for (const uv of [-commonScale, -commonScale/2, 0, commonScale/2, commonScale]) {
+    const gy = py(uv);
+    s += `<line x1="${mg.left-3}" y1="${gy}" x2="${mg.left}" y2="${gy}" stroke="#ccc" stroke-width="1"/>`;
+    s += `<text x="${mg.left-6}" y="${gy+4}" text-anchor="end" font-size="9" fill="#9AA2AE">${uv>0?'+':''}${Math.round(uv)}μV</text>`;
+  }
+
+  // Time axis
+  for (let ti=0; ti<=6; ti++) {
+    const t = tMin+tRange*ti/6;
+    s += `<text x="${px(t)}" y="${mg.top+ph+14}" text-anchor="middle" font-size="9.5" fill="#9AA2AE">${t.toFixed(1)}s</text>`;
+  }
+
+  // Region legend (right side — one entry per region, not per channel)
+  regions.forEach((reg, i) => {
+    const ly = mg.top + i * 24 + 10;
+    s += `<rect x="${mg.left+pw+8}" y="${ly-7}" width="20" height="3" rx="1.5" fill="${reg.color}"/>`;
+    s += `<text x="${mg.left+pw+32}" y="${ly}" font-size="10" fill="${reg.color}" font-weight="600">${reg.name} (${(reg.channels||[]).length})</text>`;
+  });
+  s += `<text x="${mg.left+pw+8}" y="${mg.top+regions.length*24+16}" font-size="9" fill="#9AA2AE">${allChs.length} channels · ±${Math.round(commonScale)}μV</text>`;
+
+  s += `<rect x="${mg.left}" y="${mg.top}" width="${pw}" height="${ph}" fill="none" stroke="rgba(20,24,31,.08)" stroke-width="1"/>`;
+  s += `</svg>`;
+  container.innerHTML = s;
+}
+
+/* ─── Separate: 5 region panels, each showing all channels in that region ── */
+function _renderSeparate(containerId, data, events) {
+  const container = $(containerId);
+  const regions   = data.regions || [];
+  const times     = data.times   || [];
+  const blinks    = data.blink_times || [];
+  if (!regions.length || !times.length) {
+    container.innerHTML = '<div class="loading">No data</div>'; return;
+  }
+
+  const W = Math.max(container.getBoundingClientRect().width || 800, 400);
+  const panelH = 100, labelH = 20;
+  const mg = { right:58, left:58 };
+  const pw = W - mg.left - mg.right;
+  const tMin = times[0], tMax = times[times.length-1], tRange = tMax-tMin || 1;
+  const totalH = regions.length * (panelH + labelH);
+
+  const px = t => mg.left + (t-tMin)/tRange * pw;
+
+  let s = `<svg width="${W}" height="${totalH}" style="display:block;overflow:visible">`;
+
+  regions.forEach((reg, ri) => {
+    const channels = (reg.channels || []).map(ch => ({ ...ch, y: _demean(ch.y) }));
+    const offY     = ri * (panelH + labelH);
+    const plotTop  = offY + labelH;
+    const plotBot  = plotTop + panelH;
+    const midY     = plotTop + panelH / 2;
+
+    // Scale: p75 of per-channel p95 in this region (robust to a noisy channel)
+    const chScales = channels.map(ch => _p95(ch.y)).sort((a,b)=>a-b);
+    const scale    = Math.max(5, chScales[Math.floor(chScales.length * 0.75)] * 1.1 || 20);
+
+    const py = v => midY - Math.max(-panelH/2*.9, Math.min(panelH/2*.9, (v/scale)*(panelH/2)*.9));
+
+    // Region label
+    s += `<text x="4" y="${plotTop+14}" font-size="11" fill="${reg.color}" font-weight="700">${reg.name}</text>`;
+    s += `<text x="4" y="${plotTop+26}" font-size="9" fill="#9AA2AE">${channels.length} ch</text>`;
+
+    // Background + border
+    s += `<rect x="${mg.left}" y="${plotTop}" width="${pw}" height="${panelH}" fill="${ri%2===0?'rgba(20,24,31,.015)':'rgba(20,24,31,.005)'}"/>`;
+    s += `<rect x="${mg.left}" y="${plotTop}" width="${pw}" height="${panelH}" fill="none" stroke="rgba(20,24,31,.07)" stroke-width="1"/>`;
+
+    // Blink bands
+    for (const bt of blinks) {
+      const bx = Math.max(mg.left, px(bt-0.15)), bx2 = Math.min(mg.left+pw, px(bt+0.2));
+      s += `<rect x="${bx}" y="${plotTop}" width="${Math.max(1,bx2-bx)}" height="${panelH}" fill="var(--blink)" rx="2"/>`;
+    }
+
+    // Event markers
+    for (const ev of events) {
+      if (ev.t_s < tMin-.1 || ev.t_s > tMax+.1) continue;
+      s += `<line x1="${px(ev.t_s)}" y1="${plotTop}" x2="${px(ev.t_s)}" y2="${plotBot}" stroke="#E76F51" stroke-width="1" stroke-dasharray="3,3" opacity=".5"/>`;
+      if (ri === 0) s += `<text x="${px(ev.t_s)+3}" y="${plotTop+10}" font-size="8" fill="#E76F51">${_esc(ev.label)}</text>`;
+    }
+
+    // Zero baseline
+    s += `<line x1="${mg.left}" y1="${midY}" x2="${mg.left+pw}" y2="${midY}" stroke="rgba(20,24,31,.1)" stroke-width="1"/>`;
+
+    // All channels in this region overlapped
+    for (const ch of channels) {
+      const pts = times.map((t,j) => `${j===0?'M':'L'}${px(t).toFixed(1)},${py(ch.y[j]).toFixed(1)}`).join(' ');
+      s += `<path d="${pts}" stroke="${reg.color}" fill="none" stroke-width="1" opacity=".6"/>`;
+    }
+
+    // Y-axis scale bar (right)
+    const sbX = mg.left + pw + 4;
+    const half = panelH * 0.45;
+    s += `<line x1="${sbX+4}" y1="${midY-half}" x2="${sbX+4}" y2="${midY+half}" stroke="#ccc" stroke-width="1"/>`;
+    s += `<text x="${sbX+9}" y="${midY-half+4}" font-size="8" fill="#9AA2AE">+${Math.round(scale)}μV</text>`;
+    s += `<text x="${sbX+9}" y="${midY+half+4}" font-size="8" fill="#9AA2AE">−${Math.round(scale)}μV</text>`;
+
+    // Time axis on last panel only
+    if (ri === regions.length - 1) {
+      for (let ti=0; ti<=6; ti++) {
+        const t = tMin+tRange*ti/6;
+        s += `<text x="${px(t)}" y="${plotBot+13}" text-anchor="middle" font-size="9" fill="#9AA2AE">${t.toFixed(1)}s</text>`;
+      }
+    }
+  });
+
+  s += `</svg>`;
+  container.innerHTML = s;
+}
+
+function _renderMinimap(mm, winStart, winEnd) {
+  const svg = $('minimapSvg');
+  const W = $('minimapWrap').clientWidth || 600, H = 44;
+  const env = mm.envelope, n = env.length;
+  let s = '';
+  const bW = W / n;
+  for (let i = 0; i < n; i++) {
+    const bh = Math.max(1, env[i] * H);
+    s += `<rect x="${i*bW}" y="${H-bh}" width="${bW+0.5}" height="${bh}" fill="rgba(111,174,137,.55)"/>`;
+  }
+  if (mm.duration_s > 0) {
+    const wx = (winStart / mm.duration_s) * W;
+    const ww = ((winEnd - winStart) / mm.duration_s) * W;
+    s += `<rect x="${wx}" y="0" width="${Math.max(2,ww)}" height="${H}" fill="rgba(20,24,31,.18)" rx="2"/>`;
+    s += `<rect x="${wx}" y="0" width="2" height="${H}" fill="var(--ink)"/>`;
+  }
+  svg.innerHTML = s;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+}
+
+// p95 of demeaned absolute values — used for per-channel auto-scale.
+// We subtract the channel mean first so DC offsets (common in raw EEG,
+// can be hundreds of µV) don't inflate the scale and flatten the trace.
+function _p95(arr) {
+  const vals = arr.filter(isFinite);
+  if (!vals.length) return 10;
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const abs = vals.map(v => Math.abs(v - mean)).sort((a, b) => a - b);
+  return abs[Math.floor(abs.length * 0.95)] || 10;
+}
+
+// Demean an array (subtract mean of finite values)
+function _demean(arr) {
+  const vals = arr.filter(isFinite);
+  if (!vals.length) return arr;
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return arr.map(v => isFinite(v) ? v - mean : v);
+}
+
+function _renderEegStacked(containerId, data, events) {
+  const container = $(containerId);
+  const channels = data.channels || [];
+  const times    = data.times || [];
+  const blinks   = data.blink_times || [];
+
+  if (!channels.length || !times.length) {
+    container.innerHTML = '<div class="loading">No data in this window</div>';
+    return;
+  }
+
+  const rowH   = 56;
+  const labelW = 56;
+  const scaleW = 52;
+  const W = Math.max((container.getBoundingClientRect().width || 800), 400);
+  const plotW = W - labelW - scaleW;
+  const totalH = channels.length * rowH;
+  const halfRow = rowH * 0.42;
+  const tMin = times[0], tMax = times[times.length - 1];
+  const tRange = tMax - tMin || 1;
+
+  // Demean each channel (remove DC offset) then auto-scale per channel
+  const chData   = channels.map(ch => ({ ...ch, y: _demean(ch.y) }));
+  const chScales = chData.map(ch => Math.max(5, _p95(ch.y) * 1.1));
+
+  const px = t => labelW + (t - tMin) / tRange * plotW;
+  const py = (v, row) => {
+    const scaleUV = chScales[row];
+    const clipped = Math.max(-scaleUV, Math.min(scaleUV, isFinite(v) ? v : 0));
+    return (row + 0.5) * rowH - (clipped / scaleUV) * halfRow;
+  };
+
+  let s = `<svg width="${W}" height="${totalH + 14}" style="display:block;font-family:Inter,sans-serif">`;
+
+  // Row backgrounds
+  for (let i = 0; i < channels.length; i++) {
+    if (i % 2 === 0) s += `<rect x="0" y="${i*rowH}" width="${W}" height="${rowH}" fill="rgba(20,24,31,.018)"/>`;
+    const cy = (i + 0.5) * rowH;
+    s += `<line x1="${labelW}" y1="${cy}" x2="${labelW+plotW}" y2="${cy}" stroke="rgba(20,24,31,.07)" stroke-width="1"/>`;
+  }
+
+  // Blink bands (before traces so they're behind)
+  for (const bt of blinks) {
+    const bx0 = px(bt - 0.15), bx1 = px(bt + 0.2);
+    if (bx1 < labelW || bx0 > labelW + plotW) continue;
+    const bx = Math.max(labelW, bx0);
+    const bw = Math.min(labelW + plotW, bx1) - bx;
+    s += `<rect x="${bx.toFixed(1)}" y="0" width="${Math.max(1, bw).toFixed(1)}" height="${totalH}" fill="var(--blink)" rx="2"/>`;
+    s += `<text x="${(bx + bw/2).toFixed(1)}" y="8" text-anchor="middle" font-size="7.5" fill="rgba(100,95,180,.6)">blink</text>`;
+  }
+
+  // Event markers
+  for (const ev of events) {
+    if (ev.t_s < tMin - 0.1 || ev.t_s > tMax + 0.1) continue;
+    const ex = px(ev.t_s);
+    s += `<line x1="${ex}" y1="0" x2="${ex}" y2="${totalH}" stroke="#E76F51" stroke-width="1.2" stroke-dasharray="4,3" opacity=".7"/>`;
+    s += `<text x="${ex+3}" y="10" font-size="9" fill="#E76F51" opacity=".85">${_esc(ev.label)}</text>`;
+  }
+
+  // Channel traces (use demeaned data)
+  for (let i = 0; i < channels.length; i++) {
+    const ch = chData[i];
+    const col = REG_COL[ch.region] || '#888';
+    let d = '';
+    for (let j = 0; j < times.length; j++) {
+      const x = px(times[j]), y = py(ch.y[j], i);
+      d += j === 0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : ` L${x.toFixed(1)},${y.toFixed(1)}`;
+    }
+    s += `<path d="${d}" stroke="${col}" fill="none" stroke-width="1.4"/>`;
+    const cy = (i + 0.5) * rowH + 4;
+    s += `<text x="${labelW-4}" y="${cy}" text-anchor="end" font-size="10" fill="${col}" font-weight="600">${ch.name}</text>`;
+  }
+
+  // Per-channel scale bars on the right
+  const sbX = labelW + plotW + 4;
+  for (let i = 0; i < channels.length; i++) {
+    const cy = (i + 0.5) * rowH;
+    const uv = Math.round(chScales[i]);
+    s += `<line x1="${sbX+4}" y1="${cy-halfRow}" x2="${sbX+4}" y2="${cy+halfRow}" stroke="#C8CDD4" stroke-width="1"/>`;
+    s += `<line x1="${sbX+1}" y1="${cy-halfRow}" x2="${sbX+7}" y2="${cy-halfRow}" stroke="#C8CDD4" stroke-width="1"/>`;
+    s += `<line x1="${sbX+1}" y1="${cy+halfRow}" x2="${sbX+7}" y2="${cy+halfRow}" stroke="#C8CDD4" stroke-width="1"/>`;
+    s += `<text x="${sbX+10}" y="${cy-halfRow+4}" font-size="8.5" fill="#9AA2AE">+${uv}</text>`;
+    s += `<text x="${sbX+10}" y="${cy+halfRow+4}" font-size="8.5" fill="#9AA2AE">−${uv}μV</text>`;
+  }
+
+  // Time axis
+  s += `<line x1="${labelW}" y1="${totalH}" x2="${labelW+plotW}" y2="${totalH}" stroke="rgba(20,24,31,.12)" stroke-width="1"/>`;
+  for (let ti = 0; ti <= 6; ti++) {
+    const t = tMin + tRange * ti / 6;
+    const tx = px(t);
+    s += `<text x="${tx}" y="${totalH+12}" text-anchor="middle" font-size="9.5" fill="#9AA2AE">${t.toFixed(1)}s</text>`;
+  }
+  s += '</svg>';
+  container.innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BRAIN SIGNALS (ANALYSIS)
+══════════════════════════════════════════════════════════════════ */
+function setErpCh(chs) {
+  ST.anal.erpCh = chs;
+  _setPillActive('erpChPills', p => p.getAttribute('onclick')?.includes(`'${chs}'`));
+  drawErp();
+}
+function setPsdReg(r) {
+  ST.anal.psdReg = r;
+  _setPillActive('psdRegPills', p => p.textContent.trim() === r);
+  drawPsd();
+}
+
+async function drawAnalysis() {
+  if (!ST.recId) return;
+  ST._drawn.analysis = true;
+  drawErp();
+  drawPsd();
+  drawTrialTable();
+}
+
+async function drawErp() {
+  if (!ST.recId) return;
+  _L('erpBody');
+  try {
+    const d = await fetch(`/api/eeg/${ST.recId}/erp?channels=${ST.anal.erpCh}`).then(r => r.json());
+    _renderErp('erpBody', d);
+  } catch(e) {
+    $('erpBody').innerHTML = `<div class="loading" style="color:var(--acc)">Error: ${e.message}</div>`;
+  }
+}
+
+function _renderErp(cid, data) {
+  const container = $(cid);
+  const erps = data.erps || [];
+  if (!erps.length) { container.innerHTML = '<div class="loading">No trial data</div>'; return; }
+
+  const W = 500, H = 230;
+  const mg = {top:18, right:18, bottom:38, left:52};
+  const pw = W-mg.left-mg.right, ph = H-mg.top-mg.bottom;
+  const colors = ['#6FAE89','#E76F51','#6B7FB0','#D4A574','#B580A8'];
+
+  let yMin = Infinity, yMax = -Infinity;
+  for (const e of erps) for (let i = 0; i < e.mean.length; i++) {
+    if (e.mean[i]-e.sem[i] < yMin) yMin = e.mean[i]-e.sem[i];
+    if (e.mean[i]+e.sem[i] > yMax) yMax = e.mean[i]+e.sem[i];
+  }
+  const pad = (yMax-yMin)*.12 || 1;
+  yMin -= pad; yMax += pad;
+
+  const xScale = t => mg.left + (t+200) / 800 * pw;
+  const yScale = v => mg.top + (yMax-v)/(yMax-yMin)*ph;
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">`;
+
+  // Grid
+  for (let i=0;i<=4;i++) {
+    const v = yMin+(yMax-yMin)*i/4;
+    const gy = yScale(v);
+    s+=`<line x1="${mg.left}" y1="${gy}" x2="${mg.left+pw}" y2="${gy}" stroke="rgba(20,24,31,.06)" stroke-width="1"/>`;
+    s+=`<text x="${mg.left-5}" y="${gy+4}" text-anchor="end" font-size="9.5" fill="#9AA2AE">${v.toFixed(1)}</text>`;
+  }
+  s+=`<line x1="${mg.left}" y1="${yScale(0)}" x2="${mg.left+pw}" y2="${yScale(0)}" stroke="rgba(20,24,31,.2)" stroke-width="1"/>`;
+
+  // Stimulus onset + annotations
+  const ox = xScale(0);
+  s+=`<line x1="${ox}" y1="${mg.top}" x2="${ox}" y2="${mg.top+ph}" stroke="rgba(20,24,31,.3)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+  s+=`<text x="${ox+4}" y="${mg.top+12}" font-size="9" fill="rgba(20,24,31,.45)">stimulus</text>`;
+  // P300 annotation
+  const p300x = xScale(300);
+  s+=`<text x="${p300x}" y="${mg.top-4}" text-anchor="middle" font-size="8.5" fill="#9AA2AE">P300</text>`;
+  s+=`<line x1="${p300x}" y1="${mg.top}" x2="${p300x}" y2="${mg.top+4}" stroke="#9AA2AE" stroke-width="1"/>`;
+  // N200
+  const n200x = xScale(200);
+  s+=`<text x="${n200x}" y="${mg.top+ph+28}" text-anchor="middle" font-size="8.5" fill="#9AA2AE">N200</text>`;
+
+  // X axis ticks
+  for (const t of [-200,-100,0,100,200,300,400,500]) {
+    const tx = xScale(t);
+    s+=`<text x="${tx}" y="${mg.top+ph+14}" text-anchor="middle" font-size="9.5" fill="#9AA2AE">${t}</text>`;
+  }
+  s+=`<text x="${mg.left+pw/2}" y="${H-2}" text-anchor="middle" font-size="10" fill="#9AA2AE">time from stimulus (ms)</text>`;
+  s+=`<text x="10" y="${H/2}" text-anchor="middle" font-size="10" fill="#9AA2AE" transform="rotate(-90,10,${H/2})">μV</text>`;
+
+  // SEM + traces
+  for (let ei=0; ei<erps.length; ei++) {
+    const e = erps[ei], col = colors[ei%colors.length], tms = e.time_ms;
+    const upper = tms.map((t,i)=>`${xScale(t).toFixed(1)},${yScale(e.mean[i]+e.sem[i]).toFixed(1)}`);
+    const lower = [...tms].reverse().map((t,i)=>{const ri=tms.length-1-i;return `${xScale(t).toFixed(1)},${yScale(e.mean[ri]-e.sem[ri]).toFixed(1)}`;});
+    s+=`<polygon points="${[...upper,...lower].join(' ')}" fill="${col}" fill-opacity=".15"/>`;
+    const pts = tms.map((t,i)=>`${i===0?'M':'L'}${xScale(t).toFixed(1)},${yScale(e.mean[i]).toFixed(1)}`).join(' ');
+    s+=`<path d="${pts}" stroke="${col}" fill="none" stroke-width="2"/>`;
+  }
+  s+=`<rect x="${mg.left}" y="${mg.top}" width="${pw}" height="${ph}" fill="none" stroke="rgba(20,24,31,.08)" stroke-width="1"/>`;
+  s+=`</svg>`;
+
+  // Explain box
+  const explainHtml = `<div class="explain-box">
+    <strong>What you're seeing:</strong> The average brain response across all trials of each type.
+    The signal is baseline-corrected (mean of −200ms to 0ms = 0).
+    A positive peak around <strong>300ms</strong> (P300) means the brain recognised the stimulus.
+    An early negative dip (<strong>N200</strong>) reflects conflict detection.
+  </div>`;
+
+  // Legend
+  let legend = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">`;
+  for (let ei=0; ei<erps.length; ei++) {
+    const e=erps[ei], col=colors[ei%colors.length];
+    legend+=`<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;">
+      <div style="width:22px;height:3px;background:${col};border-radius:2px"></div>
+      ${_esc(e.cue)} (n=${e.n_trials})</div>`;
+  }
+  legend+=`</div><div style="font-size:10.5px;color:var(--ink-3);margin-top:4px;">Channels averaged: ${data.channels?.join(', ')}</div>`;
+
+  container.innerHTML = explainHtml + s + legend;
+}
+
+async function drawPsd() {
+  if (!ST.recId) return;
+  _L('psdBody');
+  try {
+    const d = await fetch(`/api/eeg/${ST.recId}/psd?region=${ST.anal.psdReg}`).then(r=>r.json());
+    _renderPsd('psdBody', d);
+  } catch(e) {
+    $('psdBody').innerHTML = `<div class="loading" style="color:var(--acc)">Error</div>`;
+  }
+}
+
+function _renderPsd(cid, data) {
+  const container=$(cid);
+  const {freqs, power_db: power} = data;
+  if (!freqs?.length) { container.innerHTML='<div class="loading">No PSD data</div>'; return; }
+
+  const W=480, H=210;
+  const mg={top:14,right:16,bottom:38,left:50};
+  const pw=W-mg.left-mg.right, ph=H-mg.top-mg.bottom;
+  const fMin=Math.log10(1), fMax=Math.log10(80);
+  const xS = f => mg.left+(Math.log10(Math.max(f,.1))-fMin)/(fMax-fMin)*pw;
+  const yMin=Math.min(...power)-2, yMax=Math.max(...power)+2;
+  const yS = v => mg.top+(yMax-v)/(yMax-yMin)*ph;
+
+  const bands = [
+    {name:'Delta\n(deep sleep)',lo:1,hi:4,col:'rgba(107,127,176,.2)'},
+    {name:'Theta\n(memory)',lo:4,hi:8,col:'rgba(212,165,116,.2)'},
+    {name:'Alpha\n(relaxed)',lo:8,hi:13,col:'rgba(111,174,137,.25)'},
+    {name:'Beta\n(focused)',lo:13,hi:30,col:'rgba(181,128,168,.2)'},
+    {name:'Gamma\n(attention)',lo:30,hi:80,col:'rgba(86,137,168,.15)'},
+  ];
+
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">`;
+  for (const b of bands) {
+    const bx=xS(b.lo), bw=xS(b.hi)-bx;
+    s+=`<rect x="${bx}" y="${mg.top}" width="${bw}" height="${ph}" fill="${b.col}"/>`;
+    const label = b.name.split('\n');
+    const mid=(xS(b.lo)+xS(b.hi))/2;
+    s+=`<text x="${mid}" y="${mg.top+ph+18}" text-anchor="middle" font-size="8.5" fill="#9AA2AE">${label[0]}</text>`;
+    s+=`<text x="${mid}" y="${mg.top+ph+27}" text-anchor="middle" font-size="7.5" fill="#bbb">${label[1]}</text>`;
+  }
+  for (let i=0;i<=4;i++) {
+    const v=yMin+(yMax-yMin)*i/4, gy=yS(v);
+    s+=`<line x1="${mg.left}" y1="${gy}" x2="${mg.left+pw}" y2="${gy}" stroke="rgba(20,24,31,.06)" stroke-width="1"/>`;
+    s+=`<text x="${mg.left-5}" y="${gy+4}" text-anchor="end" font-size="9" fill="#9AA2AE">${v.toFixed(0)}</text>`;
+  }
+  for (const f of [1,2,4,8,13,20,30,50,80]) {
+    const tx=xS(f);
+    s+=`<text x="${tx}" y="${mg.top+ph+12}" text-anchor="middle" font-size="9" fill="#9AA2AE">${f}Hz</text>`;
+  }
+  s+=`<text x="10" y="${H/2}" text-anchor="middle" font-size="10" fill="#9AA2AE" transform="rotate(-90,10,${H/2})">dB/Hz</text>`;
+
+  const col = REG_COL[data.region]||'#6FAE89';
+  const pts = freqs.map((f,i)=>`${i===0?'M':'L'}${xS(f).toFixed(1)},${yS(power[i]).toFixed(1)}`).join(' ');
+  s+=`<path d="${pts}" stroke="${col}" fill="none" stroke-width="2"/>`;
+
+  // Alpha peak annotation
+  const aMask = freqs.map((f,i)=>f>=7&&f<=14?i:-1).filter(i=>i>=0);
+  if (aMask.length) {
+    const pi = aMask.reduce((b,i)=>power[i]>power[b]?i:b, aMask[0]);
+    const apx=xS(freqs[pi]), apy=yS(power[pi]);
+    s+=`<circle cx="${apx}" cy="${apy}" r="4" fill="${col}"/>`;
+    s+=`<text x="${apx+6}" y="${apy-4}" font-size="9.5" fill="${col}" font-weight="600">α peak ${freqs[pi].toFixed(1)}Hz</text>`;
+  }
+  s+=`<rect x="${mg.left}" y="${mg.top}" width="${pw}" height="${ph}" fill="none" stroke="rgba(20,24,31,.08)" stroke-width="1"/>`;
+  s+=`</svg>`;
+
+  const explainHtml = `<div class="explain-box">
+    <strong>Reading this chart:</strong> Each coloured band is a brain rhythm.
+    A prominent <strong>alpha peak (8–13 Hz)</strong> is normal and rises when relaxed or eyes closed.
+    <strong>Beta (13–30 Hz)</strong> increases during focused tasks.
+    The <strong>alpha peak frequency</strong> tends to slow down with fatigue.
+  </div>`;
+
+  container.innerHTML = explainHtml + s +
+    `<div style="font-size:10.5px;color:var(--ink-3);margin-top:4px;">${data.region} region · Welch method</div>`;
+}
+
+async function drawTrialTable() {
+  if (!ST.recId) return;
+  _L('trialTableWrap');
+  try {
+    const d = await fetch(`/api/eeg/${ST.recId}/trials`).then(r=>r.json());
+    const trials = d.trials || [];
+    $('trialCount').textContent = `${trials.length} trials`;
+    const cueCounts = {};
+    for (const t of trials) cueCounts[t.cue]=(cueCounts[t.cue]||0)+1;
+    let html = `<table class="trial-table"><thead><tr>
+      <th>#</th><th>CUE</th><th>START</th><th>DURATION</th><th>MISSED</th>
+    </tr></thead><tbody>`;
+    for (const t of trials) {
+      html+=`<tr onclick="eegJumpTo(${t.start_s||0})">
+        <td class="mono" style="color:var(--ink-3);font-size:11px">${t.trial_number}</td>
+        <td style="font-weight:600">${_esc(t.cue)}</td>
+        <td class="mono" style="text-align:right">${t.start_s?t.start_s.toFixed(2)+'s':'—'}</td>
+        <td class="mono" style="text-align:right">${t.duration_s?t.duration_s.toFixed(2)+'s':'—'}</td>
+        <td style="text-align:center;color:var(--acc)">${t.missed?'●':'—'}</td>
+      </tr>`;
+    }
+    html+=`</tbody></table>`;
+    $('trialTableWrap').innerHTML = html;
+  } catch(e) {
+    $('trialTableWrap').innerHTML = `<div class="loading" style="color:var(--acc)">Error</div>`;
+  }
+}
+
+function eegJumpTo(t_s) {
+  ST.eeg.t_start = Math.max(0, t_s - 0.5);
+  showTab('eeg');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VIDEO SYNC
+══════════════════════════════════════════════════════════════════ */
+function setSpeed(s) {
+  ST.video.speed = s;
+  _setPillActive('speedPills', p => p.getAttribute('onclick')?.includes(`(${s})`));
+}
+
+async function initVideo() {
+  if (!ST.recId) return;
+  ST._drawn.video = true;
+  videoPause();
+  $('videoLoading').style.display = 'flex';
+  $('videoImg').style.display = 'none';
+  try {
+    const info = await fetch(`/api/video/${ST.recId}/info`).then(r=>r.json());
+    ST.video.fps        = info.fps;           // actual fps from phan_frame
+    ST.video.nFrames    = info.n_frames;
+    ST.video.startFrame = info.video_start_frame || 0;
+    ST.video.eegAtStart = info.eeg_at_start   || 0;
+    $('videoSubLabel').textContent =
+      `${info.fps.toFixed(1)}fps (actual) · ${info.n_frames.toLocaleString()} frames · ${info.duration_s.toFixed(1)}s`;
+    $('vmFps').textContent = `${info.fps.toFixed(1)} fps`;
+    // Start at first EEG-synced frame (frames 0 to startFrame-1 are pre-sync)
+    const startF = info.video_start_frame || 0;
+    $('videoScrubber').min = startF;
+    $('videoScrubber').max = info.n_frames - 1;
+    $('videoLoading').style.display = 'none';
+    $('videoImg').style.display = 'block';
+    videoSeek(startF);
+    // Start blink scan in background — doesn't block video playback.
+    // Bands will appear correctly once it finishes; until then, fallback to data.blink_times.
+    if (!_blinkByFrame) _preloadBlinks(ST.recId);
+  } catch(e) {
+    $('videoLoading').textContent = 'Video unavailable';
+  }
+}
+
+function videoToggle() {
+  ST.video.playing ? videoPause() : videoPlay();
+}
+
+function videoPlay() {
+  if (!ST.video.nFrames || ST.video.playing) return;
+  ST.video.playing = true;
+  $('playBtn').textContent = '⏸';
+  $('playBtn').classList.add('primary');
+  const step = Math.max(1, Math.round(ST.video.speed));
+  const fps  = ST.video.fps || 167;
+  const ms   = Math.round(1000 * step / fps);
+  ST.video._timer = setInterval(() => {
+    let n = ST.video.frame + step;
+    if (n >= ST.video.nFrames) n = 0;
+    videoSeek(n);
+  }, Math.max(50, ms));
+}
+
+function videoPause() {
+  ST.video.playing = false;
+  if (ST.video._timer) { clearInterval(ST.video._timer); ST.video._timer = null; }
+  if (ST.video._eegTimer) { clearTimeout(ST.video._eegTimer); ST.video._eegTimer = null; }
+  $('playBtn').textContent = '▶';
+  $('playBtn').classList.remove('primary');
+}
+
+function videoStep(d) {
+  videoPause();
+  videoSeek(Math.max(0, Math.min(ST.video.nFrames-1, ST.video.frame + d)));
+}
+
+function videoScrubInput(v) {
+  videoPause();
+  videoSeek(parseInt(v));
+}
+
+let _lastEegUpdateMs = 0;
+let _eegFollowDebounce = null;
+
+function _frameToVideoTime(n) {
+  const fps   = ST.video.fps || 167;
+  const start = ST.video.startFrame || 0;
+  return (n - start) / fps;
+}
+
+// Sync EEG viewer scroll position to a given video-relative time.
+// Called whenever video advances if ST.t_follow is true.
+function _syncEegToVideoTime(videoT) {
+  if (!ST.recId || !ST.video.eegAtStart) return;
+  // Convert video time → EEG session absolute time
+  const eegT = videoT + ST.video.eegAtStart;
+  // Place current time at 70% of the window (so past is visible on left)
+  ST.eeg.t_start = Math.max(0, eegT - ST.eeg.win * 0.7);
+  if (_activeTab === 'eeg') {
+    clearTimeout(_eegFollowDebounce);
+    _eegFollowDebounce = setTimeout(drawEeg, 300);
+  }
+}
+
+function setFollow(on) {
+  ST.t_follow = on;
+  $('followBtn').classList.toggle('active', on);
+  $('followBtn').title = on ? 'EEG follows video (click to disable)' : 'EEG is free-scrolling (click to follow video)';
+}
+
+function videoSeek(n) {
+  ST.video.frame = n;
+  const t   = _frameToVideoTime(n);
+  const dur = _frameToVideoTime(ST.video.nFrames);
+
+  $('videoImg').src = `/api/video/${ST.recId}/frame?n=${n}`;
+  $('videoScrubber').value = n;
+  $('vmFrame').textContent = n.toLocaleString();
+  $('vmTime').textContent  = `${t.toFixed(3)}s`;
+  $('vTimeLabel').textContent = `${t.toFixed(2)}s / ${dur.toFixed(1)}s`;
+
+  // Update global time cursor
+  ST.t_current = t;
+  if (ST.t_follow) _syncEegToVideoTime(t);
+  _updateTimelineMarker(t);
+
+  // Throttle video-EEG panel update (250ms max)
+  const now = Date.now();
+  if (now - _lastEegUpdateMs > 250) {
+    _lastEegUpdateMs = now;
+    _loadVideoEeg(n);
+  }
+}
+
+async function _loadVideoEeg(n) {
+  if (!ST.recId) return;
+  try {
+    const d = await fetch(`/api/video/${ST.recId}/eeg_at_frame?n=${n}&window_s=4`).then(r=>r.json());
+    _renderVideoEeg(d);
+    // Update video time display with the accurate phan_frame-derived time
+    if (d.video_t_s !== undefined) {
+      $('vmTime').textContent = `${d.video_t_s.toFixed(3)}s`;
+    }
+    // Update trial badge
+    const trial = d.trial;
+    if (trial) {
+      $('trialBadge').innerHTML = `<div class="trial-badge${trial.missed?' missed':''}">
+        Trial ${trial.trial_number} · <strong>${_esc(trial.cue)}</strong>
+        ${trial.missed ? ' · missed' : ''}
+      </div>`;
+    } else {
+      $('trialBadge').innerHTML = '<div style="font-size:11px;color:var(--ink-3);">Between trials</div>';
+    }
+    const offset = (d.t_center_s - (d.video_t_s ?? 0)).toFixed(1);
+    $('videoEegTime').textContent = `video ${(d.video_t_s ?? 0).toFixed(2)}s → EEG session ${d.t_center_s.toFixed(2)}s (offset ${offset}s)`;
+  } catch(e) {
+    // Silent fail during playback
+  }
+}
+
+// Channel → color mapping for individual EEG channels
+const CH_COL = {
+  FP1:'#E76F51', FPZ:'#E76F51', FP2:'#E76F51',  // frontopolar = coral (blink channel!)
+  FZ:'#6B7FB0', FCZ:'#6B7FB0', F3:'#6B7FB0', F4:'#6B7FB0', AF3:'#6B7FB0',
+  CZ:'#6FAE89', C3:'#6FAE89',  C4:'#6FAE89',
+  CPZ:'#B580A8',PZ:'#B580A8',  P3:'#B580A8',  P4:'#B580A8',
+  OZ:'#5689A8', O1:'#5689A8',  O2:'#5689A8',  POZ:'#5689A8',
+};
+
+function _renderVideoEeg(data) {
+  const channels = data.regions || [];
+  const times    = data.times  || [];
+  if (!channels.length || !times.length) return;
+
+  const W = Math.max($('videoEegWrap').getBoundingClientRect().width || 700, 400);
+  const rowH = 56, labelW = 48, scaleW = 50;
+  const plotW = W - labelW - scaleW;
+  const H = channels.length * rowH;
+  const halfRow = rowH * 0.42;
+
+  const chData   = channels.map(ch => ({ ...ch, y: _demean(ch.y) }));
+  const chScales = chData.map(ch => Math.max(5, _p95(ch.y) * 1.1));
+
+  const videoT  = data.video_t_s ?? (ST.video.frame / (ST.video.fps || 167));
+  const tCenter = data.t_center_s;
+  const tMin    = times[0], tMax = times[times.length - 1];
+  const tRange  = tMax - tMin || 1;
+
+  // Blink bands: use pre-loaded closed_frame positions (instant) or fallback to API data.
+  const fps      = ST.video.fps || 153;
+  const startF   = ST.video.startFrame || 0;
+  const eegStart = ST.video.eegAtStart || 0;
+  let blinks;
+  if (_blinkByFrame) {
+    blinks = _blinkByFrame
+      .map(b => eegStart + (b.closed_frame - startF) / fps)
+      .filter(t => t >= tMin - 0.3 && t <= tMax + 0.3);
+  } else {
+    blinks = (data.blink_times || []).filter(t => t >= tMin - 0.3 && t <= tMax + 0.3);
+  }
+
+  // Map absolute EEG time → x pixel
+  const px = t => labelW + (t - tMin) / tRange * plotW;
+  // Map µV → y pixel within row i (per-channel scale)
+  const py = (v, i) => {
+    const scaleUV = chScales[i];
+    const clipped = Math.max(-scaleUV, Math.min(scaleUV, isFinite(v) ? v : 0));
+    return (i + 0.5) * rowH - (clipped / scaleUV) * halfRow;
+  };
+  // Label: show actual video time (trailing window, past on left, current frame near right)
+  const relLabel = t => {
+    const videoEquiv = videoT + (t - tCenter);  // convert EEG time to video time equivalent
+    return videoEquiv.toFixed(1) + 's';
+  };
+
+  let s = `<svg width="${W}" height="${H + 16}" style="display:block;overflow:visible">`;
+
+  // Row backgrounds + baselines
+  for (let i = 0; i < channels.length; i++) {
+    if (i % 2 === 0)
+      s += `<rect x="0" y="${i*rowH}" width="${W}" height="${rowH}" fill="rgba(20,24,31,.02)"/>`;
+    const cy = (i + 0.5) * rowH;
+    s += `<line x1="${labelW}" y1="${cy}" x2="${W}" y2="${cy}" stroke="rgba(20,24,31,.07)" stroke-width="1"/>`;
+  }
+
+  // Blink bands
+  for (const bt of blinks) {
+    const bx0 = px(bt - 0.15), bx1 = px(bt + 0.2);
+    if (bx1 < labelW || bx0 > W) continue;
+    const bx = Math.max(labelW, bx0), bw = Math.min(W, bx1) - bx;
+    s += `<rect x="${bx.toFixed(1)}" y="0" width="${Math.max(1, bw).toFixed(1)}" height="${H}" fill="var(--blink)" rx="2"/>`;
+    s += `<text x="${(bx + bw/2).toFixed(1)}" y="8" text-anchor="middle" font-size="7.5" fill="rgba(100,95,180,.7)">blink</text>`;
+  }
+
+  // "Now" line: current frame is near the right edge (trailing window)
+  const nowX = px(tCenter);
+  s += `<line x1="${nowX.toFixed(1)}" y1="0" x2="${nowX.toFixed(1)}" y2="${H}" stroke="rgba(231,111,81,.85)" stroke-width="2"/>`;
+  s += `<text x="${(nowX - 44).toFixed(1)}" y="10" font-size="8.5" fill="rgba(231,111,81,.9)">▶ ${videoT.toFixed(2)}s</text>`;
+
+  // Traces (demeaned)
+  for (let i = 0; i < channels.length; i++) {
+    const ch  = chData[i];
+    const col = CH_COL[ch.name] || '#9AA2AE';
+    let d = '';
+    for (let j = 0; j < times.length; j++) {
+      const x = px(times[j]), y = py(ch.y[j], i);
+      d += j === 0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : ` L${x.toFixed(1)},${y.toFixed(1)}`;
+    }
+    s += `<path d="${d}" stroke="${col}" fill="none" stroke-width="1.6"/>`;
+    s += `<text x="${labelW - 4}" y="${((i + 0.5) * rowH + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="${col}" font-weight="600">${ch.name}</text>`;
+  }
+
+  // Time axis — relative labels
+  s += `<line x1="${labelW}" y1="${H}" x2="${W}" y2="${H}" stroke="rgba(20,24,31,.1)" stroke-width="1"/>`;
+  for (let ti = 0; ti <= 6; ti++) {
+    const t  = tMin + tRange * ti / 6;
+    const tx = px(t);
+    s += `<text x="${tx.toFixed(1)}" y="${H + 13}" text-anchor="middle" font-size="9" fill="#9AA2AE">${relLabel(t)}</text>`;
+  }
+
+  // Per-channel scale bars (right edge)
+  const sbX = labelW + plotW + 4;
+  for (let i = 0; i < channels.length; i++) {
+    const cy = (i + 0.5) * rowH, uv = Math.round(chScales[i]);
+    s += `<line x1="${sbX+4}" y1="${cy-halfRow}" x2="${sbX+4}" y2="${cy+halfRow}" stroke="#444" stroke-width="1"/>`;
+    s += `<line x1="${sbX+1}" y1="${cy-halfRow}" x2="${sbX+7}" y2="${cy-halfRow}" stroke="#444" stroke-width="1"/>`;
+    s += `<line x1="${sbX+1}" y1="${cy+halfRow}" x2="${sbX+7}" y2="${cy+halfRow}" stroke="#444" stroke-width="1"/>`;
+    s += `<text x="${sbX+10}" y="${cy-halfRow+4}" font-size="8" fill="#666">+${uv}</text>`;
+    s += `<text x="${sbX+10}" y="${cy+halfRow+4}" font-size="8" fill="#666">−${uv}μV</text>`;
+  }
+
+  s += `</svg>`;
+  $('videoEegWrap').innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GAZE MAP
+══════════════════════════════════════════════════════════════════ */
+async function drawGaze() {
+  if (!ST.recId) return;
+  ST._drawn.gaze = true;
+  _L('heatmapWrap');
+  _L('polarBody');
+
+  try {
+    const d = await fetch(`/api/tobii/${ST.recId}/gaze_summary`).then(r=>r.json());
+    ST.gaze.duration  = d.pupil_times_s?.at(-1) || 0;
+    ST.gaze.displayW  = d.display_w || 1024;
+    ST.gaze.displayH  = d.display_h || 768;
+    $('gazeTimeEnd').textContent = _fmt(ST.gaze.duration);
+    $('gazeScrubber').max = 1000;
+    $('gazeStats').textContent =
+      `${d.n_fixations.toLocaleString()} fixations · ${d.n_saccades.toLocaleString()} saccades · display ${Math.round(d.display_w)}×${Math.round(d.display_h)}`;
+    _renderHeatmap(d);
+    _renderPolar(d);
+    _renderGazeDot(null, null);
+  } catch(e) {
+    $('heatmapWrap').innerHTML = `<div class="loading" style="color:var(--acc)">Error: ${e.message}</div>`;
+  }
+}
+
+let _gazeDebounce = null;
+function gazeSeek(frac) {
+  const t = frac * ST.gaze.duration;
+  $('gazeTimeStart').textContent = _fmt(t);
+  // Update global time and seek video if loaded
+  ST.t_current = t;
+  _updateTimelineMarker(t);
+  if (ST.recId && ST.video.nFrames && ST.video.eegAtStart) {
+    // Convert gaze session time → video time (gaze uses same time base as EEG)
+    const eegAtStart = ST.video.eegAtStart;
+    const videoT = t - eegAtStart;
+    if (videoT >= 0) {
+      const frame = Math.round(videoT * ST.video.fps) + ST.video.startFrame;
+      if (frame >= 0 && frame < ST.video.nFrames && _activeTab !== 'gaze') {
+        videoSeek(Math.min(ST.video.nFrames - 1, frame));
+      }
+    }
+  }
+  clearTimeout(_gazeDebounce);
+  _gazeDebounce = setTimeout(() => _fetchGazeAt(t), 120);
+}
+
+async function _fetchGazeAt(t) {
+  if (!ST.recId) return;
+  try {
+    const d = await fetch(`/api/tobii/${ST.recId}/window?t_start_s=${t}&t_end_s=${t+0.5}`).then(r=>r.json());
+    // Take first valid gaze point
+    let gx=null, gy=null;
+    for (let i=0; i<(d.gaze_x||[]).length; i++) {
+      if (d.gaze_x[i]!==null && d.gaze_y[i]!==null) { gx=d.gaze_x[i]; gy=d.gaze_y[i]; break; }
+    }
+    _renderGazeDot(gx, gy);
+  } catch(e) {}
+}
+
+function _renderGazeDot(gx, gy) {
+  const svg = $('gazeSvg');
+  const W = Math.min($('gazeDisplay').clientWidth || 480, 480);
+  const H = Math.round(W * 9 / 16);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+
+  let s = `<rect width="${W}" height="${H}" fill="#1a1a2e"/>`;
+  // Grid lines (screen quadrants)
+  s+=`<line x1="${W/2}" y1="0" x2="${W/2}" y2="${H}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>`;
+  s+=`<line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>`;
+  s+=`<rect x="10" y="10" width="${W-20}" height="${H-20}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="1" rx="4"/>`;
+  const dw = ST.gaze.displayW || 1024, dh = ST.gaze.displayH || 768;
+  s+=`<text x="${W/2}" y="14" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.2)">${Math.round(dw)}×${Math.round(dh)} display</text>`;
+
+  if (gx !== null && gy !== null) {
+    // Map actual display coordinates → SVG
+    const dw = ST.gaze.displayW || 1024;
+    const dh = ST.gaze.displayH || 768;
+    const dx = (gx / dw) * W;
+    const dy = (gy / dh) * H;
+    s+=`<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="12" fill="none" stroke="#6FAE89" stroke-width="2" opacity=".6"/>`;
+    s+=`<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="5" fill="#6FAE89"/>`;
+    s+=`<text x="${(dx+16).toFixed(1)}" y="${(dy+4).toFixed(1)}" font-size="9.5" fill="#6FAE89">(${Math.round(gx)}, ${Math.round(gy)})</text>`;
+  } else {
+    s+=`<text x="${W/2}" y="${H/2}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="rgba(255,255,255,.3)">Drag scrubber to see gaze position</text>`;
+  }
+  svg.innerHTML = s;
+}
+
+function _renderHeatmap(data) {
+  const hm = data.heatmap || [];
+  const container = $('heatmapWrap');
+  const W = Math.min(container.clientWidth || 480, 640);
+  const H = Math.round(W * 9/16);
+  const nX=64, nY=36, cW=W/nX, cH=H/nY;
+  const _vir = t => {
+    const r=Math.round(68+t*(253-68)), g=Math.round(1+t*(231-1)), b=Math.round(84+t*(37-84));
+    return `rgb(${r},${g},${b})`;
+  };
+  let s=`<svg width="${W}" height="${H}" style="display:block;">`;
+  s+=`<rect width="${W}" height="${H}" fill="#1a1a2e"/>`;
+  for (const [xi,yi,v] of hm)
+    s+=`<rect x="${(xi*cW).toFixed(1)}" y="${(yi*cH).toFixed(1)}" width="${(cW+0.5).toFixed(1)}" height="${(cH+0.5).toFixed(1)}" fill="${_vir(v)}" opacity="${(.3+v*.7).toFixed(2)}"/>`;
+  s+=`<line x1="${W/2-10}" y1="${H/2}" x2="${W/2+10}" y2="${H/2}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<line x1="${W/2}" y1="${H/2-10}" x2="${W/2}" y2="${H/2+10}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`</svg>`;
+  container.innerHTML = s;
+}
+
+function _renderPolar(data) {
+  const dirs = data.saccade_dirs || [];
+  const container = $('polarBody');
+  const W=200, H=200, cx=W/2, cy=H/2, R=78;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for (const r of [R*.33,R*.67,R])
+    s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(20,24,31,.08)" stroke-width="1"/>`;
+  for (let deg=0;deg<360;deg+=45) {
+    const rad=deg*Math.PI/180;
+    s+=`<line x1="${cx}" y1="${cy}" x2="${(cx+R*Math.cos(rad)).toFixed(1)}" y2="${(cy+R*Math.sin(rad)).toFixed(1)}" stroke="rgba(20,24,31,.06)" stroke-width="1"/>`;
+  }
+  const n=dirs.length;
+  for (let i=0;i<n;i++) {
+    const v=dirs[i]; if(!v) continue;
+    const s1=(i*360/n-90)*Math.PI/180, e1=((i+1)*360/n-90)*Math.PI/180;
+    const r1=10, r2=10+v*(R-14);
+    const x1=cx+r1*Math.cos(s1), y1=cy+r1*Math.sin(s1);
+    const x2=cx+r2*Math.cos(s1), y2=cy+r2*Math.sin(s1);
+    const x3=cx+r2*Math.cos(e1), y3=cy+r2*Math.sin(e1);
+    const x4=cx+r1*Math.cos(e1), y4=cy+r1*Math.sin(e1);
+    s+=`<path d="M${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} L${x3.toFixed(1)},${y3.toFixed(1)} L${x4.toFixed(1)},${y4.toFixed(1)} Z" fill="var(--r-central)" opacity=".8"/>`;
+  }
+  for (const [l,deg] of [['N',-90],['E',0],['S',90],['W',180]]) {
+    const rad=deg*Math.PI/180;
+    s+=`<text x="${(cx+(R+14)*Math.cos(rad)).toFixed(1)}" y="${(cy+(R+14)*Math.sin(rad)+4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#9AA2AE" font-weight="600">${l}</text>`;
+  }
+  s+=`</svg>`;
+  container.innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BLINK ATLAS
+══════════════════════════════════════════════════════════════════ */
+let _blinkData     = null;   // full blinks response (pre-loaded on recording switch)
+let _blinkByFrame  = null;  // sorted array of {closed_frame, eeg_t} for instant lookup
+
+async function _preloadBlinks(recId) {
+  try {
+    const d = await fetch(`/api/video/${recId}/blinks`).then(r => r.json());
+    if (ST.recId !== recId) return;  // user switched away — discard stale result
+    _blinkData    = d;
+    _blinkByFrame = (d.blinks || [])
+      .filter(b => b.in_video && b.closed_frame >= 0)
+      .map(b => ({ closed_frame: b.closed_frame, phan_frame: b.phan_frame }))
+      .sort((a, b) => a.closed_frame - b.closed_frame);
+  } catch(e) {
+    _blinkData    = null;
+    _blinkByFrame = null;
+  }
+}
+let _blinkFilter   = 'all';  // 'all' | 'video'
+let _blinkSort     = 'time'; // 'time' | 'amplitude'
+
+function filterBlinks(f) {
+  _blinkFilter = f;
+  _setPillActive('blinkFilterPills', p => p.getAttribute('onclick')?.includes(`'${f}'`));
+  _renderBlinkGrid();
+}
+function sortBlinks(s) {
+  _blinkSort = s;
+  _setPillActive('blinkSortPills', p => p.getAttribute('onclick')?.includes(`'${s}'`));
+  _renderBlinkGrid();
+}
+
+async function drawBlinks() {
+  if (!ST.recId) return;
+  ST._drawn.blinks = true;
+  _L('blinkGrid', 'Scanning video for exact eye closures… (~10s first load)');
+  $('blinkDetail').style.display = 'none';
+  try {
+    // _preloadBlinks may already be running (started from initVideo) — await it instead of re-fetching
+    if (!_blinkData) {
+      _blinkData = await fetch(`/api/video/${ST.recId}/blinks`).then(r => r.json());
+      _blinkByFrame = (_blinkData.blinks || [])
+        .filter(b => b.in_video && b.closed_frame >= 0)
+        .map(b => ({ closed_frame: b.closed_frame, phan_frame: b.phan_frame }))
+        .sort((a, b) => a.closed_frame - b.closed_frame);
+    }
+    $('blinkAtlasSubtitle').textContent =
+      `${_blinkData.n_blinks} blinks · ${_blinkData.n_in_video} in-video · ` +
+      (_blinkData.aperture_available ? 'aperture available' : 'no aperture data');
+    _renderBlinkGrid();
+  } catch(e) {
+    $('blinkGrid').innerHTML = `<div class="loading" style="color:var(--acc)">Error: ${e.message}</div>`;
+  }
+}
+
+function _renderBlinkGrid() {
+  if (!_blinkData) return;
+  let blinks = [..._blinkData.blinks];
+  if (_blinkFilter === 'video')  blinks = blinks.filter(b => b.in_video);
+  if (_blinkFilter === 'strong') blinks = blinks.filter(b => Math.abs(b.fp1_peak_uv || 0) >= 100);
+  if (_blinkSort === 'amplitude') blinks.sort((a, b) => Math.abs(b.fp1_peak_uv) - Math.abs(a.fp1_peak_uv));
+
+  if (!blinks.length) {
+    $('blinkGrid').innerHTML = '<div class="loading">No blinks match the current filter</div>';
+    return;
+  }
+
+  let html = '<div class="blink-grid">';
+  for (const b of blinks) {
+    const label = b.in_video
+      ? (b.trial ? `T${b.trial.trial_number} · ${_esc(b.trial.cue)}` : 'Between trials')
+      : 'EEG only';
+    const badgeCls = b.trial?.missed ? 'missed' : b.in_video ? '' : 'eeg-only';
+    const amp = b.fp1_peak_uv !== null ? `${b.fp1_peak_uv > 0 ? '+' : ''}${Math.round(b.fp1_peak_uv)}µV` : '—';
+    const timeLabel = b.in_video ? `${(b.video_t_s || 0).toFixed(2)}s` : `EEG ${b.t_peak_s.toFixed(2)}s`;
+
+    html += `<div class="blink-card${b.in_video ? '' : ' eeg-only'}" id="bc-${b.id}"
+      onclick="openBlink(${b.id})">
+      <div class="bc-frames" id="bcf-${b.id}">
+        ${b.in_video ? (() => {
+          // Center on closed_frame (video-detected eye closure), not EEG peak
+          const closedF = b.closed_frame ?? b.phan_frame;
+          const fps = ST.video.fps || 153;
+          const off = Math.round(fps * 0.07);  // ±70ms context frames
+          const maxF = ST.video.nFrames - 1;
+          const frames = [
+            Math.max(0, closedF - off),
+            closedF,                             // this is the actual closed-eye frame
+            Math.min(maxF, closedF + off),
+          ];
+          const offset_ms = Math.round((closedF - b.phan_frame) / fps * 1000);
+          return frames.map((f, i) =>
+            `<img class="bc-frame" src="/api/video/${ST.recId}/frame?n=${f}" loading="lazy"
+              style="${i===1 ? 'outline:1.5px solid rgba(111,174,137,.9);' : 'opacity:.7;'}"
+              title="${i===0?'before':i===1?`closed eye (${offset_ms>0?'+':''}${offset_ms}ms from EEG peak)`:'after'}">`
+          ).join('');
+        })() : '<div style="flex:1;display:grid;place-items:center;color:#555;font-size:10px;">no video</div>'}
+      </div>
+      <svg class="bc-eeg" id="bce-${b.id}" viewBox="0 0 160 36" preserveAspectRatio="none"></svg>
+      <div class="bc-meta">
+        <span class="bc-badge ${badgeCls}">${_esc(label)}</span>
+        <span>${timeLabel}</span>
+      </div>
+      <div class="bc-meta" style="margin-top:3px;">
+        <span style="font-family:'JetBrains Mono';font-size:9.5px;">FP1 ${amp}</span>
+        <span style="font-size:9.5px;">${b.sync_quality === 'exact' ? '✓ synced' : '~ eeg'}</span>
+      </div>
+      ${(() => {
+        const absAmp = Math.abs(b.fp1_peak_uv || 0);
+        const pct = Math.min(100, absAmp / 3);   // 300µV = 100%
+        const col = absAmp >= 150 ? 'var(--pri)' : absAmp >= 100 ? 'var(--a2)' : 'var(--ink-3)';
+        return `<div style="height:2px;background:var(--hair-2);border-radius:1px;margin-top:4px;">
+          <div style="height:2px;width:${pct}%;background:${col};border-radius:1px;"></div>
+        </div>`;
+      })()}
+    </div>`;
+  }
+  html += '</div>';
+  $('blinkGrid').innerHTML = html;
+
+  // Lazy-load mini EEG sparklines for visible cards
+  _renderBlinkSparklines(blinks);
+}
+
+async function _renderBlinkSparklines(blinks) {
+  // Load EEG mini-traces for cards in batches of 6
+  for (let i = 0; i < Math.min(blinks.length, 30); i++) {
+    const b = blinks[i];
+    const svgEl = $(`bce-${b.id}`);
+    if (!svgEl) continue;
+    try {
+      const d = await fetch(
+        `/api/eeg/${ST.recId}/window?t_start_s=${b.t_peak_s - 0.6}&t_end_s=${b.t_peak_s + 0.6}&channels=FP1,CZ&band=raw&scale=raw`
+      ).then(r => r.json());
+      const chs = d.channels || [];
+      if (!chs.length) continue;
+      const times = d.times;
+      const W = 160, H = 36;
+      let s = '';
+      for (let ci = 0; ci < chs.length; ci++) {
+        const ch = chs[ci];
+        const y = _demean(ch.y);
+        const scale = Math.max(5, _p95(y) * 1.2);
+        const col = CH_COL[ch.name] || '#888';
+        const midY = H / 2;
+        const pts = times.map((t, j) => {
+          const x = (j / (times.length - 1)) * W;
+          const yv = midY - Math.max(-H/2*.9, Math.min(H/2*.9, (y[j] / scale) * (H/2) * .9));
+          return `${j===0?'M':'L'}${x.toFixed(1)},${yv.toFixed(1)}`;
+        }).join(' ');
+        s += `<path d="${pts}" stroke="${col}" fill="none" stroke-width="1.2"/>`;
+      }
+      // Peak marker
+      const peakX = ((b.t_peak_s - (b.t_peak_s - 0.6)) / 1.2) * W;
+      s += `<line x1="${peakX.toFixed(1)}" y1="0" x2="${peakX.toFixed(1)}" y2="${H}" stroke="rgba(231,111,81,.6)" stroke-width="1"/>`;
+      svgEl.innerHTML = s;
+    } catch(e) {}
+  }
+}
+
+async function openBlink(blinkId) {
+  // Highlight selected card
+  document.querySelectorAll('.blink-card').forEach(c => c.classList.remove('selected'));
+  $(`bc-${blinkId}`)?.classList.add('selected');
+
+  const blink = _blinkData?.blinks.find(b => b.id === blinkId);
+  if (!blink) return;
+
+  $('blinkDetail').style.display = '';
+  $('blinkDetailTitle').textContent = blink.in_video
+    ? `Blink at ${(blink.video_t_s || 0).toFixed(2)}s (video)`
+    : `Blink at ${blink.t_peak_s.toFixed(2)}s (EEG only)`;
+  $('blinkDetailSub').textContent =
+    blink.trial ? `Trial ${blink.trial.trial_number} · ${blink.trial.cue}` : 'Between trials';
+  $('blinkDetailEeg').innerHTML = '<div class="loading"><div class="spin"></div>Loading…</div>';
+  $('blinkFilmstrip').innerHTML = blink.in_video
+    ? '<div class="loading" style="min-height:80px;"><div class="spin"></div>Loading frames…</div>'
+    : '<div style="color:var(--ink-3);font-size:11.5px;padding:8px;">No video — blink occurred outside the video recording window</div>';
+
+  // Seek video to this blink
+  if (blink.in_video && ST.video.nFrames) {
+    ST.t_current = blink.video_t_s || 0;
+    _updateTimelineMarker(ST.t_current);
+    if (_activeTab === 'blinks') {
+      // Don't switch tab but update video state
+      ST.video.frame = blink.closed_frame ?? blink.phan_frame;
+    }
+  }
+
+  try {
+    const d = await fetch(`/api/video/${ST.recId}/blinks/${blinkId}/detail`).then(r => r.json());
+
+    // Filmstrip
+    if (d.video_frames.length > 0) {
+      const strip = d.video_frames.map(f =>
+        `<img src="/api/video/${ST.recId}/frame?n=${f}" loading="lazy"
+          style="height:80px;width:auto;border-radius:4px;flex-shrink:0;background:#111;"
+          title="frame ${f}">`
+      ).join('');
+      $('blinkFilmstrip').innerHTML = strip;
+      // Mark the peak frame
+      const peakIdx = d.video_frames.indexOf(blink.phan_frame);
+      if (peakIdx >= 0) {
+        const imgs = $('blinkFilmstrip').querySelectorAll('img');
+        if (imgs[peakIdx]) imgs[peakIdx].style.outline = '2px solid #E76F51';
+      }
+    }
+
+    // EEG detail
+    _renderBlinkDetailEeg(d);
+
+    // Aperture
+    if (d.aperture) {
+      $('blinkDetailAperture').style.display = '';
+      _renderBlinkAperture(d.aperture, blink.phan_frame);
+    } else {
+      $('blinkDetailAperture').style.display = 'none';
+    }
+
+    // Scroll detail into view
+    $('blinkDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch(e) {
+    $('blinkDetailEeg').innerHTML = `<div class="loading" style="color:var(--acc)">Error: ${e.message}</div>`;
+  }
+}
+
+function closeBlinkDetail() {
+  $('blinkDetail').style.display = 'none';
+  document.querySelectorAll('.blink-card').forEach(c => c.classList.remove('selected'));
+}
+
+function _renderBlinkDetailEeg(d) {
+  const channels = (d.eeg_channels || []).map(ch => ({ ...ch, y: _demean(ch.y) }));
+  const times    = d.times || [];
+  if (!channels.length || !times.length) {
+    $('blinkDetailEeg').innerHTML = '<div class="loading">No EEG data</div>';
+    return;
+  }
+  const W = Math.max($('blinkDetailEeg').getBoundingClientRect().width || 700, 400);
+  const rowH = 50, labelW = 48, scaleW = 52;
+  const plotW = W - labelW - scaleW;
+  const H = channels.length * rowH;
+  const tMin = times[0], tMax = times[times.length-1], tRange = tMax - tMin || 1;
+  const chScales = channels.map(ch => Math.max(5, _p95(ch.y) * 1.1));
+  const px = t => labelW + (t - tMin) / tRange * plotW;
+  const py = (v, i) => {
+    const s = chScales[i];
+    return (i + 0.5) * rowH - Math.max(-rowH*.45, Math.min(rowH*.45, (v/s)*rowH*.45));
+  };
+
+  let s = `<div style="font-size:11px;color:var(--ink-3);margin-bottom:6px;">FP1 (coral) = blink channel — peak ±100ms window · −600ms to +600ms</div>`;
+  s += `<svg width="${W}" height="${H}" style="display:block;overflow:visible">`;
+
+  // Peak marker at t_peak
+  const t_peak = d.blink?.t_peak_s || (tMin + tRange / 2);
+  const peakX  = px(t_peak);
+  s += `<line x1="${peakX}" y1="0" x2="${peakX}" y2="${H}" stroke="rgba(231,111,81,.7)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+  s += `<text x="${peakX+4}" y="10" font-size="8.5" fill="rgba(231,111,81,.9)">peak</text>`;
+
+  for (let i = 0; i < channels.length; i++) {
+    const ch = channels[i];
+    const col = CH_COL[ch.name] || '#888';
+    if (i%2===0) s+=`<rect x="0" y="${i*rowH}" width="${W}" height="${rowH}" fill="rgba(20,24,31,.015)"/>`;
+    const cy = (i+0.5)*rowH;
+    s+=`<line x1="${labelW}" y1="${cy}" x2="${labelW+plotW}" y2="${cy}" stroke="rgba(20,24,31,.08)" stroke-width="1"/>`;
+    const pts = times.map((t,j)=>`${j===0?'M':'L'}${px(t).toFixed(1)},${py(ch.y[j],i).toFixed(1)}`).join(' ');
+    s+=`<path d="${pts}" stroke="${col}" fill="none" stroke-width="${ch.name==='FP1'?2:1.4}"/>`;
+    s+=`<text x="${labelW-4}" y="${cy+4}" text-anchor="end" font-size="10" fill="${col}" font-weight="600">${ch.name}</text>`;
+    const uv = Math.round(chScales[i]);
+    s+=`<text x="${labelW+plotW+8}" y="${i*rowH+14}" font-size="8" fill="#9AA2AE">+${uv}µV</text>`;
+    s+=`<text x="${labelW+plotW+8}" y="${(i+1)*rowH-2}" font-size="8" fill="#9AA2AE">−${uv}µV</text>`;
+  }
+
+  // Time axis
+  s+=`<line x1="${labelW}" y1="${H}" x2="${labelW+plotW}" y2="${H}" stroke="rgba(20,24,31,.12)" stroke-width="1"/>`;
+  for (let ti=0;ti<=6;ti++) {
+    const t=tMin+tRange*ti/6, tx2=px(t);
+    const rel = ((t - t_peak)*1000).toFixed(0);
+    s+=`<text x="${tx2}" y="${H+13}" text-anchor="middle" font-size="9" fill="#9AA2AE">${rel}ms</text>`;
+  }
+  s+=`</svg>`;
+  $('blinkDetailEeg').innerHTML = s;
+}
+
+function _renderBlinkAperture(ap, peakFrame) {
+  const frames = ap.frames || [];
+  const apert  = ap.aperture_mm || [];
+  if (!frames.length) return;
+
+  const W = Math.max($('blinkDetailAperture').getBoundingClientRect().width || 600, 400);
+  const H = 80, mg = {top:10,right:40,bottom:20,left:50};
+  const pw = W-mg.left-mg.right, ph = H-mg.top-mg.bottom;
+  const yMin = Math.max(0, Math.min(...apert)-0.5);
+  const yMax = Math.max(...apert)+0.5;
+  const xScale = i => mg.left + (i/(frames.length-1))*pw;
+  const yScale = v => mg.top + (yMax-v)/(yMax-yMin)*ph;
+
+  let s = `<div style="font-size:11px;color:var(--ink-3);margin-bottom:6px;">Eyelid aperture (mm) from Phantom video — closing → 0 = fully closed → reopening</div>`;
+  s += `<svg width="${W}" height="${H}" style="display:block;">`;
+  // Zero line
+  if (yMin === 0) s+=`<line x1="${mg.left}" y1="${yScale(0)}" x2="${mg.left+pw}" y2="${yScale(0)}" stroke="rgba(20,24,31,.12)" stroke-width="1"/>`;
+  // Aperture trace
+  const pts = apert.map((v,i)=>`${i===0?'M':'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
+  s+=`<path d="${pts}" stroke="#6FAE89" fill="none" stroke-width="2"/>`;
+  // Peak frame marker
+  const peakI = frames.indexOf(peakFrame);
+  if (peakI >= 0) {
+    const px2 = xScale(peakI);
+    s+=`<line x1="${px2}" y1="${mg.top}" x2="${px2}" y2="${mg.top+ph}" stroke="rgba(231,111,81,.7)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+  }
+  // Y axis
+  for (const v of [yMin, (yMin+yMax)/2, yMax]) {
+    const gy = yScale(v);
+    s+=`<text x="${mg.left-5}" y="${gy+4}" text-anchor="end" font-size="9" fill="#9AA2AE">${v.toFixed(1)}mm</text>`;
+  }
+  s+=`</svg>`;
+  $('blinkDetailAperture').innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SESSION TIMELINE STRIP
+══════════════════════════════════════════════════════════════════ */
+let _tlData = null;   // cached timeline data for current recording
+
+async function loadTimeline(recId) {
+  _tlData = null;
+  $('timelineStrip').style.display = 'none';
+  try {
+    const d = await fetch(`/api/eeg/${recId}/timeline`).then(r => r.json());
+    _tlData = d;
+    $('timelineStrip').style.display = '';
+    _renderTimeline();
+    _setupTimelineClick();
+    // Sync badge
+    const badge = $('syncBadge');
+    if (d.sync_quality === 'synchronized') {
+      badge.textContent = '✓ Synchronized';
+      badge.style.cssText = 'background:var(--pri-soft);color:var(--pri-ink);font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;';
+    } else if (d.sync_quality === 'gaze_partial') {
+      badge.textContent = '⚠ Gaze partial';
+      badge.style.cssText = 'background:#FFF8E1;color:#7A6000;font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;';
+    } else {
+      badge.textContent = '✗ Gaze unsynced';
+      badge.style.cssText = 'background:var(--acc-soft);color:var(--acc);font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;';
+    }
+  } catch(e) {
+    // Timeline is optional — don't break if it fails
+  }
+}
+
+function _renderTimeline() {
+  const d   = _tlData;
+  if (!d) return;
+  const svg  = $('timelineSvg');
+  const W    = $('timelineWrap').clientWidth || 800;
+  const H    = 40;
+  const dur  = d.duration_s || 1;
+  const tx   = t => (t / dur) * W;
+
+  let s = '';
+
+  // Trial bars (h=16px, vertically centred)
+  for (const tr of d.trials) {
+    if (!tr.t_start || !tr.t_end) continue;
+    const x  = tx(tr.t_start), w = Math.max(2, tx(tr.t_end) - tx(tr.t_start));
+    const y  = 8;
+    s += `<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="16"
+      fill="${tr.color}" opacity="${tr.missed ? .3 : .7}" rx="2"
+      title="${_esc(tr.cue)} T${tr.phan_frame_start || ''}"
+      class="tl-trial"/>`;
+  }
+
+  // Blink ticks (thin vertical lines)
+  for (const bt of d.blink_times) {
+    const x = tx(bt);
+    s += `<line x1="${x.toFixed(1)}" y1="4" x2="${x.toFixed(1)}" y2="36"
+      stroke="rgba(110,100,200,.5)" stroke-width="1.5" class="tl-blink"/>`;
+  }
+
+  // Window marker (shows current view position) — updated by _updateTimelineMarker
+  s += `<rect id="tlWindow" x="0" y="0" width="20" height="${H}"
+    fill="rgba(20,24,31,.12)" rx="2" style="pointer-events:none"/>`;
+
+  // Playhead (current T_CURRENT)
+  s += `<line id="tlPlayhead" x1="0" y1="0" x2="0" y2="${H}"
+    stroke="rgba(231,111,81,.8)" stroke-width="2" style="pointer-events:none" class="tl-marker"/>`;
+
+  svg.innerHTML = s;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+
+  // Initial marker position
+  _updateTimelineMarker(ST.t_current);
+}
+
+function _updateTimelineMarker(videoT) {
+  if (!_tlData) return;
+  const dur = _tlData.duration_s || 1;
+  const W   = $('timelineWrap')?.clientWidth || 800;
+  const eegStart = ST.video.eegAtStart || 0;
+  // Convert video time → EEG session time for timeline positioning
+  const eegT = videoT + eegStart;
+  const x    = (eegT / dur) * W;
+
+  const ph = $('tlPlayhead');
+  if (ph) { ph.setAttribute('x1', x.toFixed(1)); ph.setAttribute('x2', x.toFixed(1)); }
+
+  // Window rect: show EEG viewer window
+  const winEl = $('tlWindow');
+  if (winEl) {
+    const winStart = (ST.eeg.t_start / dur) * W;
+    const winW     = (ST.eeg.win / dur) * W;
+    winEl.setAttribute('x',     winStart.toFixed(1));
+    winEl.setAttribute('width', Math.max(2, winW).toFixed(1));
+  }
+}
+
+function _setupTimelineClick() {
+  const wrap = $('timelineWrap');
+  if (!wrap || wrap._tlClickBound) return;
+  wrap._tlClickBound = true;
+  wrap.addEventListener('click', e => {
+    if (!_tlData) return;
+    const rect = wrap.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    const eegT = frac * (_tlData.duration_s || 1);
+    // Convert EEG session time → video time
+    const videoT = eegT - (ST.video.eegAtStart || 0);
+    ST.t_current = Math.max(0, videoT);
+    _updateTimelineMarker(ST.t_current);
+    // Seek video if loaded
+    if (ST.recId && ST.video.nFrames) {
+      const frame = Math.round(videoT * ST.video.fps) + (ST.video.startFrame || 0);
+      if (frame >= 0 && frame < ST.video.nFrames) {
+        if (_activeTab === 'video') videoSeek(frame);
+      }
+    }
+    // Always update EEG
+    ST.eeg.t_start = Math.max(0, eegT - ST.eeg.win * 0.7);
+    if (_activeTab === 'eeg') drawEeg();
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════════════════════════════ */
+init();
+</script>
+</body>
+</html>

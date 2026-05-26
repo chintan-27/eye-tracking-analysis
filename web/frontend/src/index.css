@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+#root { height: 100%; }
+
+body {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13.5px;
+  letter-spacing: -.005em;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg, #0b0d18);
+  color: var(--ink, rgba(255,255,255,.92));
+}
+
+button { font-family: inherit; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
