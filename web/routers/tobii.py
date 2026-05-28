@@ -180,6 +180,85 @@ def _compute_gaze_summary(path_str: str) -> dict:
     }
 
 
+@router.get("/{rec_id}/window_by_frame")
+def tobii_window_by_frame(rec_id: str, start_frame: int = 0, end_frame: int = 500):
+    """Return Tobii rows whose phan_frame falls in [start_frame, end_frame].
+    Requires the Tobii parquet to have been aligned (python -m db.align).
+    Returns raw rows rather than a timeseries — used by the 3D scanpath viewer.
+    """
+    rec, path = _get_recording(rec_id)
+    schema = pq.read_schema(path)
+    if "phan_frame" not in schema.names:
+        raise HTTPException(422, "Tobii parquet not aligned — run: python -m db.align")
+
+    cols = ["phan_frame", "timestamp_ms", "gaze_x", "gaze_y",
+            "event_type", "validity_left", "validity_right",
+            "pupil_left", "pupil_right", "saccade_amp", "saccade_dir"]
+    # Only request columns that exist
+    available = set(schema.names)
+    cols = [c for c in cols if c in available]
+
+    table = pq.read_table(
+        path,
+        columns=cols,
+        filters=[
+            ("phan_frame", ">=", start_frame),
+            ("phan_frame", "<=", end_frame),
+        ],
+    )
+
+    n = len(table)
+    if n == 0:
+        return {"rec_id": rec_id, "start_frame": start_frame, "end_frame": end_frame, "rows": []}
+
+    # Decimate to ≤800 rows so the scanpath stays responsive
+    target = 800
+    idx = np.round(np.linspace(0, n - 1, min(n, target))).astype(int)
+
+    def _col(name):
+        if name not in available:
+            return [None] * len(idx)
+        arr = table[name].to_numpy(zero_copy_only=False)
+        sampled = arr[idx]
+        if sampled.dtype.kind == "f":
+            return [None if not np.isfinite(v) else round(float(v), 3) for v in sampled]
+        if sampled.dtype.kind in ("U", "O"):
+            return [str(v) for v in sampled]
+        return [int(v) for v in sampled]
+
+    vl = table["validity_left"].to_numpy(zero_copy_only=False).astype(np.int8)[idx] if "validity_left" in available else np.ones(len(idx), dtype=np.int8)
+    vr = table["validity_right"].to_numpy(zero_copy_only=False).astype(np.int8)[idx] if "validity_right" in available else np.ones(len(idx), dtype=np.int8)
+
+    pf  = _col("phan_frame")
+    ts  = _col("timestamp_ms")
+    gx  = _col("gaze_x")
+    gy  = _col("gaze_y")
+    ev  = _col("event_type")
+    pl  = _col("pupil_left")
+    pr  = _col("pupil_right")
+    sa  = _col("saccade_amp")
+    sd  = _col("saccade_dir")
+
+    rows = []
+    for i in range(len(idx)):
+        valid = int(vl[i]) == 0 and int(vr[i]) == 0
+        rows.append({
+            "phan_frame":   pf[i],
+            "timestamp_ms": ts[i],
+            "gaze_x":       gx[i] if valid else None,
+            "gaze_y":       gy[i] if valid else None,
+            "event_type":   ev[i],
+            "valid":        valid,
+            "pupil_left":   pl[i] if valid else None,
+            "pupil_right":  pr[i] if valid else None,
+            "saccade_amp":  sa[i],
+            "saccade_dir":  sd[i],
+        })
+
+    return {"rec_id": rec_id, "start_frame": start_frame, "end_frame": end_frame,
+            "n_total": n, "rows": rows}
+
+
 @router.get("/{rec_id}/gaze_summary")
 def tobii_gaze_summary(rec_id: str):
     """Return full-session gaze aggregates: heatmap, saccade directions, pupil."""

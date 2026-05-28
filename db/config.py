@@ -22,6 +22,7 @@ PARQUET_DIRS = {
     "Tobii":         "tobii",
     "PhantomFrames": "phantom_frames",
     "VideoFeatures": "video_features",
+    "VideoBiomarkers": "video_biomarkers",
 }
 
 # Zarr store directories (relative to DATASERVER) for dense array outputs

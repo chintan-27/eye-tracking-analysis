@@ -164,8 +164,6 @@ def video_eeg_at_frame(rec_id: str, n: int = 0, window_s: float = 4.0):
     Returns 3 regional averages plus blink onset times.
     Also returns trial context if this frame falls within a trial.
     """
-    from web.routers.eeg import REGIONS
-
     eeg_path = Path("dataserver/eeg") / f"{rec_id}.parquet"
     if not eeg_path.exists():
         raise HTTPException(404, f"No EEG parquet for {rec_id}")
@@ -523,8 +521,6 @@ def video_blink_detail(rec_id: str, blink_id: int):
     Return full detail for one blink: EEG window (FP1-centred), surrounding video
     frame numbers, and aperture curve if video_features are available.
     """
-    from web.routers.eeg import REGIONS
-
     eeg_path = Path("dataserver/eeg") / f"{rec_id}.parquet"
     if not eeg_path.exists():
         raise HTTPException(404, f"No EEG parquet for {rec_id}")

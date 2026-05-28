@@ -13,14 +13,16 @@ import math
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from web.routers import alertness, eeg, sessions, tobii, video
+from web.routers import alertness, eeg, multimodal, pipeline, sessions, tobii, video
 from web.routers.sessions import subjects_router
 
-STATIC_DIR = Path(__file__).parent / "static"
+WEB_DIR = Path(__file__).parent
+STATIC_DIR = WEB_DIR / "static"
+FRONTEND_DIST = WEB_DIR / "frontend" / "dist"
 
 
 def _sanitize(obj: Any) -> Any:
@@ -52,12 +54,20 @@ app.include_router(eeg.router)
 app.include_router(tobii.router)
 app.include_router(alertness.router)
 app.include_router(video.router)
+app.include_router(pipeline.router)
+app.include_router(multimodal.router)
 
-# ── Static files (CSS, JS, assets served from /static/...) ──────────────────
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+elif FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
 
 # ── Serve index.html at root ─────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 def serve_root():
-    return FileResponse(STATIC_DIR / "index.html")
+    if (STATIC_DIR / "index.html").exists():
+        return FileResponse(STATIC_DIR / "index.html")
+    if (FRONTEND_DIST / "index.html").exists():
+        return FileResponse(FRONTEND_DIST / "index.html")
+    raise HTTPException(404, "Frontend build not found")

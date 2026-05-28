@@ -12,7 +12,7 @@ from collections import defaultdict
 from fastapi import APIRouter
 
 from db.database import get_db
-from db.models import EEGRecording, Session, SessionAlertness, TobiiRecording
+from db.models import EEGRecording, SessionAlertness, TobiiRecording
 
 router = APIRouter(prefix="/api/alertness", tags=["alertness"])
 
@@ -37,7 +37,6 @@ def alertness_distributions():
     """
     S = get_db()
     with S() as db:
-        sessions   = db.query(Session).all()
         alertness  = db.query(SessionAlertness).all()
         eeg_recs   = db.query(EEGRecording).all()
         tobii_recs = db.query(TobiiRecording).all()
