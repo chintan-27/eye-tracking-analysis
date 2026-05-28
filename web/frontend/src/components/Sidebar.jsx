@@ -2,10 +2,11 @@ import React from 'react'
 import { useStore } from '../store'
 
 const ICONS = {
-  home: (
+  info: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="16" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12.01" y2="8"/>
     </svg>
   ),
   eeg: (
@@ -40,22 +41,51 @@ const ICONS = {
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
   ),
+  eyefeatures: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+      <line x1="12" y1="16" x2="12" y2="21"/>
+      <line x1="8" y1="17" x2="6" y2="21"/>
+      <line x1="16" y1="17" x2="18" y2="21"/>
+    </svg>
+  ),
+  multimodal: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="9" height="9" rx="1"/>
+      <rect x="13" y="2" width="9" height="9" rx="1"/>
+      <rect x="2" y="13" width="9" height="9" rx="1"/>
+      <rect x="13" y="13" width="9" height="9" rx="1"/>
+    </svg>
+  ),
+  viz3d: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
+    </svg>
+  ),
 }
 
 const NAV = [
-  { id: 'home',     label: 'Subjects' },
-  { id: 'eeg',      label: 'EEG' },
-  { id: 'video',    label: 'Video Sync' },
-  { id: 'blinks',   label: 'Blink Atlas' },
-  { id: 'gaze',     label: 'Gaze' },
-  { id: 'analysis', label: 'Analysis' },
+  { id: 'info',        label: 'Subject Info' },
+  { id: 'eeg',         label: 'EEG'          },
+  { id: 'video',       label: 'Video Sync'   },
+  { id: 'blinks',      label: 'Blink Atlas'  },
+  { id: 'gaze',        label: 'Gaze'         },
+  { id: 'analysis',    label: 'Analysis'     },
+  { id: 'eyefeatures', label: 'Eye Features' },
+  { id: 'multimodal',  label: 'Multimodal'   },
+  { id: 'viz3d',       label: '3D View'      },
 ]
 
-export default function Sidebar({ activeTab, showTab }) {
-  const recId = useStore(s => s.recId)
+export default function Sidebar({ activeTab, setActiveTab }) {
+  const { subjectId, sessionId, paradigm, clearRecording } = useStore()
+
   return (
     <aside className="sidebar">
-      <div className="brand" onClick={() => showTab('home')}>
+      {/* Brand */}
+      <div className="brand">
         <div className="logo-box">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -68,14 +98,38 @@ export default function Sidebar({ activeTab, showTab }) {
         </div>
       </div>
 
+      {/* Active recording chip */}
+      <div style={{ padding: '6px 8px 10px', borderBottom: '1px solid var(--sb-hair)', marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                      letterSpacing: '.1em', color: 'rgba(255,255,255,.3)', marginBottom: 5 }}>
+          Recording
+        </div>
+        <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--pri)',
+                      fontWeight: 600, marginBottom: 6, overflow: 'hidden',
+                      textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {subjectId} · {sessionId?.replace(/^.*_/, '')} · {paradigm}
+        </div>
+        <button
+          onClick={clearRecording}
+          style={{
+            width: '100%', padding: '5px 0', borderRadius: 7, border: '1px solid var(--hair-2)',
+            background: 'transparent', fontSize: 10.5, color: 'var(--ink-3)',
+            cursor: 'pointer', transition: 'all .12s', fontWeight: 500,
+          }}
+          onMouseEnter={e => { e.target.style.background = 'var(--sb-hover)'; e.target.style.color = 'var(--ink)' }}
+          onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--ink-3)' }}
+        >
+          ← Change recording
+        </button>
+      </div>
+
       <div className="nav-section-label">Modules</div>
 
       {NAV.map(n => (
         <button
           key={n.id}
           className={`nav-btn ${activeTab === n.id ? 'active' : ''}`}
-          onClick={() => showTab(n.id)}
-          disabled={!recId && n.id !== 'home'}
+          onClick={() => setActiveTab(n.id)}
           aria-label={n.label}
           aria-current={activeTab === n.id ? 'page' : undefined}
         >
