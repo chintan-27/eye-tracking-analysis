@@ -79,12 +79,108 @@ export const useGazeSummary = (recId) =>
   useQuery({ queryKey: ['gazeSummary', recId], queryFn: () => fetch_json(`/api/tobii/${recId}/gaze_summary`),
              enabled: !!recId, staleTime: Infinity })
 
-// Tobii window
+// Tobii window (time-based)
 export const useTobiiWindow = (recId, tStart, win) =>
   useQuery({ queryKey: ['tobii', recId, tStart, win],
              queryFn: () => fetch_json(`/api/tobii/${recId}/window?t_start_s=${tStart}&t_end_s=${tStart + win}`),
              enabled: !!recId, staleTime: 30_000, placeholderData: keepPreviousData })
 
+// Tobii window by phan_frame range (requires aligned parquet)
+export const useTobiiWindowByFrame = (recId, startFrame, endFrame) =>
+  useQuery({
+    queryKey: ['tobiiByFrame', recId, startFrame, endFrame],
+    queryFn:  () => fetch_json(
+      `/api/tobii/${recId}/window_by_frame?start_frame=${startFrame}&end_frame=${endFrame}`
+    ),
+    enabled: !!recId && startFrame != null && endFrame != null && endFrame > startFrame,
+    staleTime: Infinity,
+    retry: false,
+    placeholderData: keepPreviousData,
+  })
+
 // Alertness distributions
 export const useAlertness = () =>
   useQuery({ queryKey: ['alertness'], queryFn: () => fetch_json('/api/alertness/distributions'), staleTime: Infinity })
+
+// Pipeline timeseries (pre-computed per-frame results from HPG run)
+export const usePipelineTimeseries = (recId, runId = null, combination = 'stable_match_farneback') =>
+  useQuery({
+    queryKey: ['pipelineTs', recId, runId, combination],
+    queryFn: () => fetch_json(
+      `/api/pipeline/${recId}/timeseries?combination=${combination}` +
+      (runId ? `&run_id=${runId}` : '')
+    ),
+    enabled: !!recId, staleTime: Infinity,
+    retry: false,
+  })
+
+// Pipeline biomarkers (aggregated feature row)
+export const usePipelineBiomarkers = (recId, runId = null, combination = 'stable_match_farneback') =>
+  useQuery({
+    queryKey: ['pipelineBm', recId, runId, combination],
+    queryFn: () => fetch_json(
+      `/api/pipeline/${recId}/biomarkers?combination=${combination}` +
+      (runId ? `&run_id=${runId}` : '')
+    ),
+    enabled: !!recId, staleTime: Infinity,
+    retry: false,
+  })
+
+// Available pipeline runs
+export const usePipelineRuns = () =>
+  useQuery({ queryKey: ['pipelineRuns'], queryFn: () => fetch_json('/api/pipeline/runs'), staleTime: 60_000 })
+
+// Available MP4 videos for a recording
+export const usePipelineVideos = (recId, runId = null) =>
+  useQuery({
+    queryKey: ['pipelineVideos', recId, runId],
+    queryFn: () => fetch_json(
+      `/api/pipeline/${recId}/videos` + (runId ? `?run_id=${runId}` : '')
+    ),
+    enabled: !!recId, staleTime: 60_000, retry: false,
+  })
+
+// Multimodal sync quality (anchor count, coverage %) — cached per recording
+export const useSyncQuality = (recId) =>
+  useQuery({
+    queryKey: ['syncQuality', recId],
+    queryFn:  () => fetch_json(`/api/multimodal/${recId}/sync_quality`),
+    enabled: !!recId, staleTime: Infinity, retry: false,
+  })
+
+// All streams at a single phan_frame
+export const useMultimodalAtFrame = (recId, phanFrame, eegWinS = 4) =>
+  useQuery({
+    queryKey: ['mmAtFrame', recId, phanFrame, eegWinS],
+    queryFn:  () => fetch_json(
+      `/api/multimodal/${recId}/at_frame?n=${phanFrame}&eeg_win_s=${eegWinS}`
+    ),
+    enabled:  !!recId && phanFrame >= 0,
+    staleTime: 10_000,
+    placeholderData: keepPreviousData,
+    retry: false,
+  })
+
+// Saccade event list (Tobii + Phantom) — heavy, cached
+export const useSaccades = (recId) =>
+  useQuery({
+    queryKey: ['saccades', recId],
+    queryFn:  () => fetch_json(`/api/multimodal/${recId}/saccades`),
+    enabled: !!recId, staleTime: Infinity, retry: false,
+  })
+
+// Blink-aligned multi-stream average (±window ms around each blink onset)
+export const useBlinkAlignment = (recId, windowMs = 500) =>
+  useQuery({
+    queryKey: ['blinkAlign', recId, windowMs],
+    queryFn:  () => fetch_json(`/api/multimodal/${recId}/blink_alignment?window_ms=${windowMs}`),
+    enabled: !!recId, staleTime: Infinity, retry: false,
+  })
+
+// Session detail: demographics + alertness per paradigm
+export const useSessionDetail = (sessionId) =>
+  useQuery({
+    queryKey: ['sessionDetail', sessionId],
+    queryFn:  () => fetch_json(`/api/sessions/${sessionId}`),
+    enabled: !!sessionId, staleTime: Infinity,
+  })
