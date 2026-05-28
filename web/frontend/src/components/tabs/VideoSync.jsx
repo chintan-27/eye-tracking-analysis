@@ -5,12 +5,14 @@ import EegChart from '../charts/EegChart'
 
 const SPEEDS = [1, 4, 10, 30]
 const EEG_INTERVAL_MS = 200   // max 5 EEG fetches/sec during playback
+const ALL_CH = ['FP1', 'FZ', 'CZ', 'CPZ', 'OZ']
 
 export default function VideoSync() {
   const { recId, video, updateVideo, setTCurrent, tFollow, updateEeg } = useStore()
   const { data: info } = useVideoInfo(recId)
   const { data: blinksData } = useBlinks(recId)
   const [speed, setSpeed] = useState(4)
+  const [selectedCh, setSelectedCh] = useState(['FP1'])
   const timerRef = useRef(null)
   const lastEegFetch = useRef(0)
 
@@ -89,9 +91,17 @@ export default function VideoSync() {
   // This places the band exactly when the eye is closed in the video.
   const blinkFrames = blinksData?.blinks?.filter(b => b.in_video && b.closed_frame >= 0) || []
 
+  const toggleCh = (ch) => setSelectedCh(prev =>
+    prev.includes(ch)
+      ? prev.length > 1 ? prev.filter(c => c !== ch) : prev
+      : [...prev, ch]
+  )
+
   const eegChartData = React.useMemo(() => {
     if (!eegData?.regions?.length || !eegData.times) return null
-    const channels = eegData.regions.map(r => ({ name: r.name, region: r.name, y: r.y }))
+    const channels = eegData.regions
+      .filter(r => selectedCh.includes(r.name))
+      .map(r => ({ name: r.name, region: r.name, y: r.y }))
     // Convert closed_frame to absolute EEG time: eegAtStart + (frame - startFrame) / fps
     const blinkTimes = blinkFrames
       .map(b => eegAtStart + (b.closed_frame - startFrame) / fps)
@@ -172,13 +182,28 @@ export default function VideoSync() {
 
         {/* EEG panel */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 4 }}>
-            EEG · 4s trailing window · FP1 = blink channel
-            {eegData && (
-              <span style={{ float: 'right', fontFamily: 'var(--mono)' }}>
-                video {(eegData.video_t_s || 0).toFixed(2)}s → EEG {(eegData.t_center_s || 0).toFixed(2)}s
-              </span>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10, color: 'var(--ink-3)', flexShrink: 0 }}>
+              EEG · 4s window
+              {eegData && (
+                <span style={{ fontFamily: 'var(--mono)', marginLeft: 6 }}>
+                  {(eegData.t_center_s || 0).toFixed(2)}s
+                </span>
+              )}
+            </span>
+            <div className="pill-grp" style={{ marginLeft: 'auto' }}>
+              {ALL_CH.map(ch => (
+                <button
+                  key={ch}
+                  className={`pill ${selectedCh.includes(ch) ? 'active' : ''}`}
+                  style={{ fontSize: 10 }}
+                  onClick={() => toggleCh(ch)}
+                  title={ch === 'FP1' ? 'FP1 — blink-correlated' : ch}
+                >
+                  {ch}
+                </button>
+              ))}
+            </div>
           </div>
           {eegChartData
             ? <EegChart data={eegChartData} mode="stacked" height={280} cursor={eegData?.t_center_s} />
